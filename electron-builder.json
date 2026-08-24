@@ -1,0 +1,12 @@
+{
+  "appId": "com.media-manager.app",
+  "productName": "Media Manager",
+  "directories": {
+    "output": "releases"
+  },
+  "files": ["dist/**/*", "dist-renderer/**/*"],
+  "icon": "./icon.ico",
+  "win": {
+    "target": ["portable", "msi"]
+  }
+}
