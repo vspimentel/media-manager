@@ -31,8 +31,10 @@
     "wait-on": "^9.1.0"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "tailwindcss": "^4.3.3"
   },
   "allowScripts": {
     "electron-winstaller@5.4.0": true

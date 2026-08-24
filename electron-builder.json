@@ -5,7 +5,7 @@
     "output": "releases"
   },
   "files": ["dist/**/*", "dist-renderer/**/*"],
-  "icon": "./icon.ico",
+  "icon": "./assets/icon.png",
   "win": {
     "target": ["portable", "msi"]
   }
