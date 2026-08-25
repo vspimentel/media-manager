@@ -1,10 +1,10 @@
 import { app, BrowserWindow } from "electron";
 import path from "path";
+import { ipcMainHandle, isDev } from "./utils/electron";
+import { getMovies } from "./services/movies";
 
-function createWindow() {
+async function createWindow() {
   const win = new BrowserWindow({
-    width: 1000,
-    height: 700,
     webPreferences: {
       preload: path.join(__dirname, "../preload/preload.js"),
       contextIsolation: true,
@@ -12,11 +12,17 @@ function createWindow() {
     },
   });
 
-  if (process.env.NODE_ENV === "development") {
+  win.maximize();
+
+  if (isDev()) {
     win.loadURL("http://localhost:5173");
   } else {
     win.loadFile(path.join(__dirname, "../../dist-renderer/index.html"));
   }
+
+  ipcMainHandle("getMovies", async () => {
+    return await getMovies();
+  });
 }
 
 app.whenReady().then(createWindow);

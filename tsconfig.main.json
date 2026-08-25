@@ -6,7 +6,9 @@
     "rootDir": "src",
     "outDir": "dist",
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node"],
+    "composite": true,
+    "tsBuildInfoFile": "./dist/tsbuildinfo"
   },
-  "include": ["src/main", "src/preload"]
+  "include": ["src/main/**/*", "src/preload/**/*", "src/global.d.ts"]
 }
