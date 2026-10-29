@@ -4,9 +4,15 @@
   "directories": {
     "output": "releases"
   },
-  "files": ["dist/**/*", "dist-renderer/**/*"],
+  "files": [
+    "dist/**/*",
+    "dist-renderer/**/*"
+  ],
   "icon": "./assets/icon.png",
   "win": {
-    "target": ["portable", "msi"]
+    "target": [
+      "portable",
+      "msi"
+    ]
   }
 }

@@ -14,7 +14,6 @@ const App = () => {
                     </div>
                     <div className="w-8/10 h-full grid grid-cols-5 gap-5 overflow-y-scroll pr-5">
                         {movies?.map((movie) => {
-                            console.log(movie)
                             return (
                                 <MovieCard key={movie.title} movie={movie} />
                             )

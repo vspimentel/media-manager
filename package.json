@@ -1,5 +1,6 @@
 {
   "name": "media-manager",
+  "productName": "Media Manager",
   "private": true,
   "version": "0.0.1",
   "type": "commonjs",
