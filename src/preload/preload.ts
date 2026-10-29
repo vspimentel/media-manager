@@ -2,12 +2,17 @@ import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("electron", {
   getMovies: () => ipcInvoke("getMovies"),
+  searchMovies: (title: string) => ipcInvoke("searchMovies", title),
+  openMovieFolder: (folderName: string) => ipcInvoke("openMovieFolder", folderName),
 } satisfies Window["electron"]);
 
 function ipcInvoke<Key extends keyof EventPayloadMapping>(
   key: Key,
+  ...args: EventRequestMapping[Key] extends void
+    ? []
+    : [payload: EventRequestMapping[Key]]
 ): Promise<EventPayloadMapping[Key]> {
-  return ipcRenderer.invoke(key);
+  return ipcRenderer.invoke(key, ...args);
 }
 
 function ipcOn<Key extends keyof EventPayloadMapping>(

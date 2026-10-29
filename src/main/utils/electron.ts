@@ -6,10 +6,12 @@ export function isDev(): boolean {
 
 export function ipcMainHandle<Key extends keyof EventPayloadMapping>(
   key: Key,
-  handler: () => EventPayloadMapping[Key] | Promise<EventPayloadMapping[Key]>,
+  handler: (
+    payload: EventRequestMapping[Key],
+  ) => EventPayloadMapping[Key] | Promise<EventPayloadMapping[Key]>,
 ) {
-  ipcMain.handle(key, (event) => {
-    return handler();
+  ipcMain.handle(key, (_event, payload) => {
+    return handler(payload);
   });
 }
 

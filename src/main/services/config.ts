@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { app } from "electron";
-import { AppConfig } from "../types/general";
+import { AppConfig } from "../types/common";
 
 export function loadConfig(): AppConfig {
   const configPath = path.join(

@@ -4,3 +4,24 @@ export type MovieFolder = {
   videoFile: string;
   subtitleFile?: string;
 };
+
+export type TMBDDetails = {
+  id: number;
+  title: string;
+  runtime: number;
+  poster_path: string;
+}
+
+export type TMBDSearch = {
+  results: TMBDResult[];
+}
+
+export type TMBDResult = {
+  id: number;
+  title: string;
+  release_date: string;
+  poster_path: string | null;
+  overview: string;
+  vote_average: number;
+  original_language: string;
+}

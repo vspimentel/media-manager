@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { app } from "electron";
-import { ensureDirectory, hash } from "../utils/general";
+import { ensureDirectory, hash } from "../utils/common";
 import console from "node:console";
 
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000;

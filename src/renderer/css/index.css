@@ -128,3 +128,30 @@
     @apply font-sans;
     }
 }
+
+.soft-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 18%) transparent;
+  scrollbar-gutter: stable;
+}
+
+.soft-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.soft-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 10px;
+}
+
+.soft-scrollbar::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 16%);
+  background-clip: padding-box;
+}
+
+.soft-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgb(255 255 255 / 30%);
+  background-clip: padding-box;
+}
