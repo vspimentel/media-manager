@@ -1,10 +1,11 @@
-import { app, protocol, net, BrowserWindow } from "electron";
-import path from "path";
 import './setup'
+import path from "path";
+import { app, protocol, net, BrowserWindow } from "electron";
 import { ipcMainHandle, isDev } from "./utils/electron";
-import { getMovies, searchMovies } from "./services/movies";
+import { getMovies, searchMovies } from "./services/movies-service";
 import { pathToFileURL } from "url";
-import { openMovieFolder } from "./actions/movieItem";
+import { changeMovie, openMovieFolder } from "./actions/movie-item";
+import { initializeDatabase } from "./database";
 
 async function createWindow() {
   const win = new BrowserWindow({
@@ -18,10 +19,10 @@ async function createWindow() {
   win.maximize();
 
   if (isDev()) {
-    win.loadURL("http://localhost:5173");
+    await win.loadURL("http://localhost:5173");
     win.webContents.openDevTools();
   } else {
-    win.loadFile(path.join(__dirname, "../../dist-renderer/index.html"));
+    await win.loadFile(path.join(__dirname, "../../dist-renderer/index.html"));
   }
 
   // Movies services
@@ -29,13 +30,17 @@ async function createWindow() {
     return await getMovies();
   });
 
-  ipcMainHandle("searchMovies", async (title) => {
-    return await searchMovies(title);
+  ipcMainHandle("searchMovies", async (args) => {
+    return await searchMovies(args.title);
   });
   
   // Movies actions
-  ipcMainHandle("openMovieFolder", async (folderName) => {
-    await openMovieFolder(folderName);
+  ipcMainHandle("openMovieFolder", async (args) => {
+    await openMovieFolder(args.folderName);
+  });
+
+  ipcMainHandle("changeMovie", async (args) => {
+    return await changeMovie(args.movieId, args.tmbdId);
   });
 }
 
@@ -47,7 +52,7 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
 
   //Create a cache directory in the user data path
   const cacheDir = path.join(app.getPath("userData"), "Cache");
@@ -62,7 +67,11 @@ app.whenReady().then(() => {
     return net.fetch(pathToFileURL(filePath).toString());
   });
 
-  createWindow()
+  initializeDatabase();
+  await createWindow();
+}).catch((err) => {
+  console.error("Failed to create window:", err);
+  app.quit();
 });
 
 app.on("window-all-closed", () => {

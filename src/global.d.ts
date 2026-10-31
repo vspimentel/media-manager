@@ -1,4 +1,5 @@
 import { TMBDResult } from "./main/types/movies";
+import { ResultResponse } from "./main/types/common";
 
 declare module "*.css";
 
@@ -8,15 +9,22 @@ declare global {
   type UnsubscribeFunction = () => void;
 
   type EventRequestMapping = {
+    // Movie services
     getMovies: void;
-    openMovieFolder: string;
-    searchMovies: string;
+    searchMovies: { title: string };
+    // Movie actions  
+    openMovieFolder: { folderName: string };
+    changeMovie: { movieId: number; tmbdId: number };
   };
 
   type EventPayloadMapping = {
+    // Movie services
     getMovies: Movie[];
-    openMovieFolder: void;
     searchMovies: TMBDResult[];
+
+    // Movie actions
+    openMovieFolder: void;
+    changeMovie: ResultResponse;
   };
 
   interface Window {
@@ -27,6 +35,7 @@ declare global {
 
       // Movie actions
       openMovieFolder: (folderName: string) => Promise<void>;
+      changeMovie: (movieId: number, tmbdId: number) => Promise<ResultResponse>;
     };
   }
 }

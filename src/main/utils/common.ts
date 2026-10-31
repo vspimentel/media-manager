@@ -7,7 +7,8 @@ import path from "node:path";
 
 /**
  * Creates a directory if it does not exist.
- * @param directory The directory path to ensure exists.
+ * @async
+ * @param {string} directory The directory path to ensure exists.
  * @returns {Promise<void>}
  */
 export async function ensureDirectory(directory: string): Promise<void> {
@@ -16,7 +17,7 @@ export async function ensureDirectory(directory: string): Promise<void> {
 
 /**
  * Creates a SHA-256 hash of the given value.
- * @param value The value to hash.
+ * @param {string} value The value to hash.
  * @returns {string} The SHA-256 hash of the given value.
  */
 export function hash(value: string): string {
@@ -29,7 +30,7 @@ export function hash(value: string): string {
 
 /**
  * Converts an absolute file path to a cache URL that can be used in the application.
- * @param absolutePath The absolute file path to convert.
+ * @param {string} absolutePath The absolute file path to convert.
  * @returns {string} The cache URL corresponding to the given absolute file path.
  */
 export function pathToCacheURL(absolutePath: string): string {

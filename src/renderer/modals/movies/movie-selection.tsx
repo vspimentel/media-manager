@@ -1,13 +1,15 @@
 import PosterFallback from "#components/fallbacks/poster-fallback";
 import { DialogContent } from "#components/ui/dialog"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "#components/ui/input-group"
-import { useMovieByTitle } from "#hooks/useMoviesByTitle";
-import { LANGUAGE_MAPPINGS } from "#lib/constants";
-import { CalendarDays, Clapperboard, Globe, Search, Star } from "lucide-react"
+import { useChangeMovie } from "#hooks/actions/useChangeMovie";
+import { useMovieByTitle } from "#hooks/services/useMoviesByTitle";
+import { showToast } from "#lib/utils";
+import { CalendarDays, Clapperboard, Globe, Search } from "lucide-react"
 
-const MovieSelectionModal = ({ title }: { title: string }) => {
+const MovieSelectionModal = ({ movieId, title, onClose }: { movieId: number; title: string, onClose: () => void }) => {
 
     const { data: movies, isLoading, error } = useMovieByTitle(title);
+    const changeMovie = useChangeMovie();
 
     const getReleaseYear = (releaseDate?: string) => {
         if (!releaseDate || releaseDate === "NaN") {
@@ -20,6 +22,17 @@ const MovieSelectionModal = ({ title }: { title: string }) => {
             ? "Unknown"
             : date.getFullYear().toString();
     };
+
+    const handleSelectMovie = async (tmbdId: number) => {
+        const result = await changeMovie.mutateAsync({ movieId, tmbdId: tmbdId });
+        onClose();
+        if (result.success) {
+            showToast("Action successful", result.message, "success");
+        } else {
+            showToast("Action failed", result.message, "error");
+        }
+    }
+
 
     return (
         <DialogContent className="w-[min(92vw,640px)] gap-0 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 p-0 text-white shadow-2xl backdrop-blur-xl">
@@ -42,7 +55,12 @@ const MovieSelectionModal = ({ title }: { title: string }) => {
 
             <div className="soft-scrollbar max-h-[min(58vh,440px)] space-y-2 overflow-y-auto p-4">
                 {movies && movies.map((movie) => (
-                    <button key={movie.id} className="group flex w-full items-center gap-4 rounded-xl border border-white/[0.07] bg-white/2.5 p-3 text-left transition hover:border-white/20 hover:bg-white/[0.07]">
+                    <button
+                        key={movie.id}
+                        type="button"
+                        onClick={() => handleSelectMovie(movie.id)}
+                        className="group flex w-full items-center gap-4 rounded-xl border border-white/[0.07] bg-white/2.5 p-3 text-left transition hover:border-white/20 hover:bg-white/[0.07]"
+                    >
                         <div className="h-19 w-13.5">
                             {movie.poster_path ? (
                                 <img
@@ -65,7 +83,9 @@ const MovieSelectionModal = ({ title }: { title: string }) => {
                             </span>
                             <span className="mt-2 block truncate text-xs text-white/35">{movie.overview}</span>
                         </span>
-                        <span className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 transition group-hover:border-white/20 group-hover:bg-white/10 group-hover:text-white/80">Select</span>
+                        <span className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 transition group-hover:border-white/20 group-hover:bg-white/10 group-hover:text-white/80">
+                            Select
+                        </span>
                     </button>
                 ))}
             </div>

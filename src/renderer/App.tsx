@@ -1,11 +1,13 @@
 import MovieCard from "#components/movies/movie-card";
 import { DarkGradientBg } from "#components/ui/background";
 import { Dialog } from "#components/ui/dialog";
-import { useMovies } from "#hooks/useMovies";
+import { useMovies } from "#hooks/services/useMovies";
 import MovieSelectionModal from "./modals/movies/movie-selection";
 import { useState } from "react";
 import { Movie } from "./types/movies";
 import { Film, Search, SlidersHorizontal, Sparkles, Tv, Gamepad2, Images, Settings } from "lucide-react";
+import { Toast } from "@base-ui/react";
+import { Toaster } from "#components/ui/toast";
 
 const App = () => {
 
@@ -65,12 +67,14 @@ const App = () => {
                     >
                         {selectedMovie && (
                             <MovieSelectionModal
+                                movieId={selectedMovie.id}
                                 title={selectedMovie.folder}
+                                onClose={() => setSelectedMovie(null)}
                             />
                         )}
                     </Dialog>
                 </div>
-
+                <Toaster />
             </DarkGradientBg>
         </>
     )
