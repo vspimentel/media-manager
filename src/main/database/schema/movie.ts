@@ -9,6 +9,8 @@ export const Movie = sqliteTable("movies", {
     title: text("title").notNull(),
     duration: text("duration").notNull(),
     folder: text("folder").notNull().unique(),
+    videoFile: text("video_file").notNull(),
+    subtitleFile: text("subtitle_file"),
     poster: text("poster"),
     tmbdId: integer("tmdb_id"),
     cacheKey: text("cache_key"),

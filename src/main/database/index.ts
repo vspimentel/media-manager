@@ -8,6 +8,10 @@ import * as database from "../database";
 
 let db: ReturnType<typeof drizzle<typeof database>> | undefined;
 
+/**
+ * Initializes the database by creating the necessary directories, 
+ * setting up the SQLite database, and running migrations.
+ */
 export function initializeDatabase(): void {
   const databaseDir = path.join(app.getPath("userData"), "database");
   fs.mkdirSync(databaseDir, { recursive: true });
@@ -25,6 +29,11 @@ export function initializeDatabase(): void {
   });
 }
 
+/**
+ * Retrieves the initialized database instance.
+ * @returns {ReturnType<typeof drizzle<typeof database>>} The initialized database instance.
+ * @throws {Error} Throws an error if the database has not been initialized.
+ */
 export function getDatabase() {
   if (!db) throw new Error("Database has not been initialized");
   return db;

@@ -1,13 +1,13 @@
 import path from "node:path";
 import fs from "fs";
-import { MovieFolder, TMBDDetails, TMBDResult, TMBDSearch } from "../types/movies";
+import { MovieFolder, MovieImage, TMBDDetails, TMBDImage, TMBDMovieImages, TMBDResult, TMBDSearch } from "../types/movies";
 import pLimit from "p-limit";
 import { getCachedImage, readJsonCache, writeImageCache, writeJsonCache } from "./cache-service";
 import { loadConfig } from "./config-service";
 import { pathToCacheURL } from "../utils/common";
 import console from "node:console";
 import { Movie } from "../database/schema/movie";
-import { getAllMovies, getMovieByFolder, saveMovie } from "../database/services/movie-db-service";
+import { deleteMovie, getAllMovies, getMovieByFolder, saveMovie } from "../database/services/movie-db-service";
 
 const config = loadConfig();
 
@@ -15,29 +15,34 @@ const MOVIES_DIR = config.moviesDir;
 const TMDB_API_KEY = config.tmdbApiKey;
 
 /**
- * Retrieves all movies from the database. If no movies are found, it fetches them from the movie folders.
+ * Retrieves all movie data from the cache or fetches it from the movie folders if not already cached.
+ * If the cache is empty or the update parameter is true, it fetches the data from the movie folders and updates the cache.
+ * Otherwise, it retrieves the data from the cache.
+ * @async
+ * @param update - A boolean indicating whether to update the movie data.
  * @returns {Promise<Movie[]>} An array of movie data objects.
  */
-export async function getMovies(): Promise<Movie[]> {
+export async function getMovies(update: boolean): Promise<Movie[]> {
   const movies = getAllMovies();
-  if (movies.length == 0) return getMoviesFromFolder();
+  if (movies.length == 0 || update) return getMoviesFromFolder();
   else return movies;
 }
 
 /**
- * Retrieves all movie folders, formats them, and fetches their data if the data is not already in the cache.
- * Saves the data in cache if necessary. Returns an array of movie data objects.
+ * Retrieves all movie data from the movie folders and caches it. 
+ * If the data is already cached, it retrieves it from the cache.
  * @async
  * @returns {Promise<Movie[]>} An array of movie data objects.
  */
-export async function getMoviesFromFolder(): Promise<Movie[]> {
+async function getMoviesFromFolder(): Promise<Movie[]> {
   const movieFolders = await getMovieFolders();
   const formattedMovieFolders = formatMovieFolders(movieFolders);
+  cleanUpMovies(formattedMovieFolders);
   const limit = pLimit(5);
   const movies = await Promise.all(
     formattedMovieFolders.map((folder) =>
       limit(async () => {
-        const movieData = await getMovieData(folder.name,);
+        const movieData = await getMovieData(folder);
         return movieData;
       }),
     ),
@@ -46,22 +51,33 @@ export async function getMoviesFromFolder(): Promise<Movie[]> {
 }
 
 /**
+ * Cleans up the movie database by removing any movies that no longer exist in the 
+ * specified movie folders.
+ * @async
+ * @param {MovieFolder[]} folders - An array of MovieFolder objects representing the current movie folders.
+ * @returns {Promise<void>} A promise that resolves when the cleanup is complete.
+ */
+async function cleanUpMovies(folders: MovieFolder[]): Promise<void> {
+  const movies = getAllMovies();
+  movies.map((movie) => {
+    const folderExists = folders.some((folder) => folder.name === movie.folder);
+    if (!folderExists) deleteMovie(movie.id);
+  })
+}
+
+/**
  * Retrieves all movie folders from the specified movies directory.
  * @async
  * @returns {Promise<string[]>} An array of movie folder names. 
  */
 async function getMovieFolders(): Promise<string[]> {
-  try {
-    const entries = await fs.promises.readdir(MOVIES_DIR, { withFileTypes: true });
-    const folders = entries
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name);
+  const entries = await fs.promises.readdir(MOVIES_DIR, {
+    withFileTypes: true,
+  });
 
-    return folders;
-  } catch (error) {
-    console.error("Error reading movie folders:", error);
-    return [];
-  }
+  return entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
 }
 
 /**
@@ -95,148 +111,206 @@ function formatMovieFolders(folders: string[]): MovieFolder[] {
 }
 
 /**
- * Searches for movies on TMDB by title and returns an array of TMBDResult objects.
+ * Searches for movies on TMDB based on the provided query and returns an array of search results. 
+ * If an error occurs during the search, it logs the error and returns an empty array.
  * @async
- * @param title - The title of the movie to search for. 
+ * @param {string} query - The search query for the movie title.
  * @returns {Promise<TMBDResult[]>} An array of TMBDResult objects containing the search results.
+ * @throws {Error} Throws an error if the TMDB request fails.
  */
-export async function searchMovies(title: string): Promise<TMBDResult[]> {
-    try {
-      const url = new URL("https://api.themoviedb.org/3/search/movie");
-      url.searchParams.append("query", title);
-      url.searchParams.append("language", "en-US");
-      url.searchParams.append("include_adult", "false");
-      url.searchParams.append("page", "1");
+export async function searchMovies(query: string): Promise<TMBDResult[]> {
+  const url = new URL("https://api.themoviedb.org/3/search/movie");
 
-      console.log(url.toString());
+  url.searchParams.append("query", query);
+  url.searchParams.append("language", "en-US");
+  url.searchParams.append("include_adult", "false");
+  url.searchParams.append("page", "1");
 
-      const response = await fetch(url,
-        {
-          headers: {
-            accept: "application/json",
-            Authorization: `Bearer ${TMDB_API_KEY}`,
-          },
+  const response = await fetch(url, {
+    headers: {
+      accept: "application/json",
+      Authorization: `Bearer ${TMDB_API_KEY}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`TMDB request failed (${response.status} ${response.statusText})`);
+  }
+
+  const results: TMBDSearch = await response.json();
+
+  return results.results;
+}
+
+/**
+ * Fetches movie posters from TMDB for a given movie ID and returns an array of MovieImage objects.
+ * If an error occurs during the fetch, it logs the error and returns an empty array.
+ * @async
+ * @param {number} tmdbId - The TMDB ID of the movie for which to fetch posters.
+ * @returns {Promise<MovieImage[]>} A promise that resolves to an array of MovieImage objects.
+ */
+export async function getMovieImages(tmdbId: number): Promise<MovieImage[]> {
+
+  let images = await readJsonCache<TMBDMovieImages>("movies-images", tmdbId.toString());
+
+  if (!images) {
+    const url = new URL(`https://api.themoviedb.org/3/movie/${tmdbId}/images`);
+
+    const response = await fetch(url,
+      {
+        headers: {
+          accept: "application/json",
+          Authorization: `Bearer ${TMDB_API_KEY}`,
         },
-      );
+      },
+    );
 
-      if (!response.ok) throw new Error(`TMDB request failed: ${response.status} ${response.statusText}`);
-
-      const results: TMBDSearch = await response.json();
-      return results.results;
-    } catch (error) {
-      console.error(`"${title}" was not found on TMBD:`, error);
-      return [];
+    if (!response.ok) {
+      throw new Error(`TMDB request failed (${response.status} ${response.statusText})`);
     }
+
+    images = await response.json() as TMBDMovieImages;
+
+    try {
+      await writeJsonCache<TMBDMovieImages>("movies-images", tmdbId.toString(), images);
+    } catch (error) {
+      console.warn(`Failed to cache movie images for ${tmdbId}:`, error);
+    }
+  }
+
+  const posters: MovieImage[] = images.posters.map((poster: TMBDImage) => ({
+    file: poster.file_path,
+    language: poster.iso_639_1,
+    width: poster.width,
+    height: poster.height,
+    type: "poster",
+  }));
+
+  return posters;
+
 }
 
 /**
  * Fetches detailed movie information from TMDB for a given movie ID and caches it. If the data is already cached, it retrieves it from the cache.
  * @async
- * @param tmbdId - The TMDB ID of the movie to fetch information for.
- * @param cacheKey - The cache key to use for storing the movie information.
- * @returns {Promise<TMBDDetails | undefined>} A promise that resolves to the detailed movie information or undefined if an error occurs.
+ * @param {number} tmdbId - The TMDB ID of the movie to fetch information for.
+ * @param {string} cacheKey - The cache key to use for storing the movie information.
+ * @returns {Promise<TMBDDetails>} A promise that resolves to the detailed movie information or undefined if an error occurs.
+ * @throws {Error} Throws an error if the TMDB request fails.
  */
-export async function getMovieInfo(tmbdId: number, cacheKey: string): Promise<TMBDDetails | undefined> {
+export async function getMovieInfo(tmdbId: number, cacheKey: string): Promise<TMBDDetails> {
+
+  const url = `https://api.themoviedb.org/3/movie/${tmdbId}`;
+
+  const response = await fetch(url, {
+    headers: {
+      accept: "application/json",
+      Authorization: `Bearer ${TMDB_API_KEY}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `TMDB request failed (${response.status} ${response.statusText})`
+    );
+  }
+
+  const info = await response.json() as TMBDDetails;
+
   try {
-      const url = "https://api.themoviedb.org/3/movie/";
+    await writeJsonCache<TMBDDetails>("movies", cacheKey, info);
+  } catch (error) {
+    console.warn(`Failed to cache movie ${tmdbId}:`, error);
+  }
 
-      const response = await fetch(`${url}/${tmbdId.toString()}`,
-        {
-          headers: {
-            accept: "application/json",
-            Authorization: `Bearer ${TMDB_API_KEY}`,
-          },
-        },
-      );
-
-      if (!response.ok) throw new Error(`TMDB request failed ${response.status} ${response.statusText}`);
-
-      const info: TMBDDetails = await response.json();
-
-      await writeJsonCache<TMBDDetails>("movies", cacheKey, info);
-
-      return info;
-    } catch (error) {
-      console.error(`"Error retrieving movie info for ID ${tmbdId}":`, error);
-      return undefined;
-    }
+  return info;
 }
 
 /**
- * Fetches the movie poster from TMDB for a given poster path and caches it. If the poster is already cached, it retrieves it from the cache.
+ * Fetches the movie poster from TMDB for a given poster path and caches it. 
+ * If the poster is already cached, it retrieves it from the cache.
  * @async
- * @param posterPath - The path of the poster image on TMDB.
- * @returns {Promise<string>} A promise that resolves to the URL of the cached poster image or an empty string if an error occurs. 
+ * @param {string} posterPath - The path of the poster image on TMDB.
+ * @returns {Promise<string>} A promise that resolves to the URL of the cached poster image or an empty string if an error occurs.
+ * @throws {Error} Throws an error if the poster request fails.
  */
 export async function getPoster(posterPath: string): Promise<string> {
-    const posterUrl = `https://image.tmdb.org/t/p/original${posterPath}`;
+  const posterUrl = `https://image.tmdb.org/t/p/original${posterPath}`;
 
-    let poster = await getCachedImage("movies", posterUrl);
+  let posterImage = await getCachedImage("movies", posterUrl);
 
-    if (!poster) {
-      try {
-        const response = await fetch(posterUrl);
+  if (!posterImage) {
+    const response = await fetch(posterUrl);
 
-        if (!response.ok) throw new Error(`Poster request failed: ${response.status} ${response.statusText}`);
-
-        poster = await writeImageCache(
-          "movies",
-          posterUrl,
-          await response.arrayBuffer(),
-        );
-      } catch (error) {
-        poster = "";
-        console.error(`Error fetching poster:`, error);
-      }
+    if (!response.ok) {
+      throw new Error(`Poster request failed (${response.status} ${response.statusText})`);
     }
-    if (poster) return pathToCacheURL(poster);
-    else return "";
+
+    const imageData = await response.arrayBuffer();
+
+    try {
+      posterImage = await writeImageCache("movies", posterUrl, imageData);
+    } catch (error) {
+      console.warn(`Failed to cache poster ${posterUrl}:`, error);
+    }
+  }
+
+  return posterImage ? pathToCacheURL(posterImage) : posterUrl;
 }
 
 /**
- * Reads the movie duration, fetches movie data from TMDB and caches it. If the data is already cached, it retrieves it from the cache.
- * Also fetches the movie poster and caches it. If the poster is already cached, it retrieves it from the cache.
+ * Fetches the movie data for a given movie folder.
  * @async
- * @param folderName The name of the folder of the movie to fetch data for.
+ * @param {MovieFolder} folder - The movie folder for which to fetch data.
  * @returns {Promise<Movie>} The movie data object.
  */
-async function getMovieData(folderName: string): Promise<Movie> {
+async function getMovieData(folder: MovieFolder): Promise<Movie> {
 
-  const movie = getMovieByFolder(folderName)
+  const movie = getMovieByFolder(folder.name);
 
-  const cacheKey = movie?.cacheKey ? movie.cacheKey : folderName.trim().toLowerCase();
+  if (movie) return movie;
 
-  let movieInfo: TMBDDetails | undefined = await readJsonCache<TMBDDetails>("movies", cacheKey);
+  const cacheKey = folder.name.trim().toLowerCase();
+
+  let movieInfo = await readJsonCache<TMBDDetails>("movies", cacheKey);
 
   if (!movieInfo) {
-    const results = await searchMovies(folderName);
-    const movieId = results.length > 0 ? results[0].id : undefined;
-    if (movieId) movieInfo = await getMovieInfo(movieId, cacheKey);
+    const results = await searchMovies(folder.name);
+    if (results.length > 0) movieInfo = await getMovieInfo(results[0].id, cacheKey);
   }
+
   let duration = "00h 00m";
+  let poster = "";
 
   if (!movieInfo) {
     return saveMovie({
-      title: folderName,
+      title: folder.name,
+      videoFile: folder.videoFile,
       duration,
-      folder: folderName,
+      folder: folder.name,
     })
   }
 
-  let poster = "";
-
-  if (movieInfo.poster_path) poster = await getPoster(movieInfo.poster_path);
+  if (movieInfo.poster_path) {
+    try {
+      poster = await getPoster(movieInfo.poster_path);
+    } catch (error) {
+      console.warn(`Failed to fetch poster for movie "${folder.name}":`, error);
+    }
+  }
 
   if (movieInfo.runtime) {
     const hours = Math.floor(movieInfo.runtime / 60);
     const minutes = movieInfo.runtime % 60;
     duration = `${hours.toString().padStart(2, "0")}h ${minutes.toString().padStart(2, "0")}m`;
-  } 
+  }
 
   return saveMovie({
     title: movieInfo.title,
     duration,
-    folder: folderName,
+    folder: folder.name,
+    videoFile: folder.videoFile,
+    subtitleFile: folder.subtitleFile,
     poster,
     tmbdId: movieInfo.id,
     cacheKey: cacheKey,

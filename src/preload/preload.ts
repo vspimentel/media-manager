@@ -2,12 +2,15 @@ import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("electron", {
   // Movie services
-  getMovies: () => ipcInvoke("getMovies"),
+  getMovies: (update: boolean) => ipcInvoke("getMovies", { update }),
   searchMovies: (title: string) => ipcInvoke("searchMovies", { title }),
+  getMovieImages: (tmbdId: number) => ipcInvoke("getMovieImages", { tmbdId }),
 
   // Movie actions
   openMovieFolder: (folderName: string) => ipcInvoke("openMovieFolder", { folderName }),
+  playMovie: (folder: string, videoFile: string) => ipcInvoke("playMovie", { folder, videoFile }),
   changeMovie: (movieId: number, tmbdId: number) => ipcInvoke("changeMovie", { movieId, tmbdId }),
+  changeMoviePoster: (movieId: number, posterPath: string) => ipcInvoke("changeMoviePoster", { movieId, posterPath }),
 } satisfies Window["electron"]);
 
 function ipcInvoke<Key extends keyof EventPayloadMapping>(

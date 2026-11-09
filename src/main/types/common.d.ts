@@ -5,5 +5,5 @@ export type AppConfig = {
 
 export type ResultResponse = {
   success: boolean;
-  message: string;
+  message?: string;
 }

@@ -1,11 +1,12 @@
 import './setup'
 import path from "path";
 import { app, protocol, net, BrowserWindow } from "electron";
-import { ipcMainHandle, isDev } from "./utils/electron";
-import { getMovies, searchMovies } from "./services/movies-service";
+import { ipcMainHandle } from "./utils/electron";
+import { getMovieImages, getMovies, searchMovies } from "./services/movies-service";
 import { pathToFileURL } from "url";
-import { changeMovie, openMovieFolder } from "./actions/movie-item";
+import { changeMovie, changeMoviePoster, openMovieFolder, playMovie } from "./actions/movie-item";
 import { initializeDatabase } from "./database";
+import { isDev } from './utils/common';
 
 async function createWindow() {
   const win = new BrowserWindow({
@@ -26,21 +27,33 @@ async function createWindow() {
   }
 
   // Movies services
-  ipcMainHandle("getMovies", async () => {
-    return await getMovies();
+  ipcMainHandle("getMovies", async (args) => {
+    return await getMovies(args.update);
   });
 
   ipcMainHandle("searchMovies", async (args) => {
     return await searchMovies(args.title);
   });
-  
+
+  ipcMainHandle("getMovieImages", async (args) => {
+    return await getMovieImages(args.tmbdId);
+  });
+
   // Movies actions
   ipcMainHandle("openMovieFolder", async (args) => {
-    await openMovieFolder(args.folderName);
+    return await openMovieFolder(args.folderName);
+  });
+
+  ipcMainHandle("playMovie", async (args) => {
+    return await playMovie(args.folder, args.videoFile);
   });
 
   ipcMainHandle("changeMovie", async (args) => {
     return await changeMovie(args.movieId, args.tmbdId);
+  });
+
+  ipcMainHandle("changeMoviePoster", async (args) => {
+    return await changeMoviePoster(args.movieId, args.posterPath);
   });
 }
 
@@ -63,7 +76,7 @@ app.whenReady().then(async () => {
 
     if (!filePath.startsWith(cacheDir + path.sep)) {
       return new Response("Forbidden", { status: 403 });
-    } 
+    }
     return net.fetch(pathToFileURL(filePath).toString());
   });
 

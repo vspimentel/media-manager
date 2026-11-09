@@ -9,8 +9,9 @@ import { Play } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Movie } from "../../types/movies"
 import PosterFallback from "#components/fallbacks/poster-fallback";
+import { showToast } from "../../utils/common";
 
-const MovieCard = ({ movie, onChangeMovie }: { movie: Movie; onChangeMovie: (movie: Movie) => void }) => {
+const MovieCard = ({ movie, onChangeMovie, onChangePoster }: { movie: Movie; onChangeMovie: (movie: Movie) => void; onChangePoster: (movie: Movie) => void }) => {
     const [openMenu, setOpenMenu] = useState(false);
 
     useEffect(() => {
@@ -19,7 +20,23 @@ const MovieCard = ({ movie, onChangeMovie }: { movie: Movie; onChangeMovie: (mov
         return () => window.removeEventListener("scroll", handleScroll, true);
     }, []);
 
-    const handleOpenMovieFolder = async () => await window.electron.openMovieFolder(movie.folder);
+    const handleOpenMovieFolder = async () => {
+        const result = await window.electron.openMovieFolder(movie.folder)
+        if (!result.success) showToast({
+            title: "Error opening movie folder",
+            message: result.message,
+            type: "error",
+        });
+    }
+
+    const handlePlayMovie = async () => {
+        const result = await window.electron.playMovie(movie.folder, movie.videoFile)
+        if (!result.success) showToast({
+            title: "Error playing movie",
+            message: result.message,
+            type: "error",
+        });
+    }
 
     return (
         <>
@@ -37,7 +54,10 @@ const MovieCard = ({ movie, onChangeMovie }: { movie: Movie; onChangeMovie: (mov
                             )}
                             <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/65 via-transparent to-white/4 opacity-80" />
                             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-black/45 to-transparent" />
-                            <div className="absolute left-1/2 top-1/2 z-10 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/35 bg-white/20 text-white opacity-0 shadow-lg shadow-black/20 backdrop-blur-md transition-all hover:scale-95 group-hover:opacity-100">
+                            <div
+                                className="absolute left-1/2 top-1/2 z-10 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/35 bg-white/20 text-white opacity-0 shadow-lg shadow-black/20 backdrop-blur-md transition-all hover:scale-95 group-hover:opacity-100"
+                                onClick={handlePlayMovie}
+                            >
                                 <Play fill="currentColor" size={32} />
                             </div>
                         </div>
@@ -67,12 +87,18 @@ const MovieCard = ({ movie, onChangeMovie }: { movie: Movie; onChangeMovie: (mov
                     >
                         Change movie
                     </ContextMenuItem>
-                    <ContextMenuItem className="rounded-lg px-2 py-1 text-sm font-light data-highlighted:bg-white/10 data-highlighted:text-white">
+                    <ContextMenuItem
+                        className="rounded-lg px-2 py-1 text-sm font-light data-highlighted:bg-white/10 data-highlighted:text-white"
+                        onClick={() => {
+                            setOpenMenu(false);
+                            onChangePoster(movie);
+                        }}
+                    >
                         Change movie poster
                     </ContextMenuItem>
                     <ContextMenuSeparator className="bg-white/10" />
                     <ContextMenuItem className="rounded-lg px-2 py-1 text-sm font-light text-red-400 data-highlighted:bg-red-500/15 data-highlighted:text-red-300">
-                        Hide movie
+                        Remove movie entry
                     </ContextMenuItem>
                 </ContextMenuContent>
             </ContextMenu>

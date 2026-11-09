@@ -1,9 +1,15 @@
 import { app } from "electron";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
-import { twMerge } from 'tailwind-merge';
-import { type ClassValue, clsx } from 'clsx';
 import path from "node:path";
+
+/**
+ * Checks if the application is running in development mode.
+ * @returns {boolean} True if the application is in development mode, false otherwise.
+ */
+export function isDev(): boolean {
+  return process.env.NODE_ENV === "development";
+}
 
 /**
  * Creates a directory if it does not exist.
@@ -37,8 +43,4 @@ export function pathToCacheURL(absolutePath: string): string {
   const cacheDir = path.join(app.getPath("userData"), "Cache");
   const relative = path.relative(cacheDir, absolutePath).split(path.sep);
   return `cache://local/${relative.map(encodeURIComponent).join("/")}`;
-}
-
-export function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
 }

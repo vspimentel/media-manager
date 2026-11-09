@@ -1,6 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 
-export function useMovieByTitle(title: string) {
+/**
+ * Fetches movies based on a search title using React Query.
+ * @param {string} title - The title to search for movies.
+ */
+export function useSearchMovies(title: string) {
   return useQuery({
     queryKey: ["movies", title],
     queryFn: () => window.electron.searchMovies(title),

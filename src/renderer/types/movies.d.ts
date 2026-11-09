@@ -3,6 +3,8 @@ export type Movie = {
   title: string;
   duration: string;
   folder: string;
+  videoFile: string;
+  subtitleFile: string;
   poster: string;
   tmbdId: number;
   cacheFile: string;

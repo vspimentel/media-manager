@@ -5,6 +5,6 @@ export default defineConfig({
     schema: './src/main/database/schema',
     out: './drizzle',
     dbCredentials: {
-        url: "./dev.sqlite"
+        url: "C:\\Users\\PC\\AppData\\Roaming\\MediaManager\\database\\dev.sqlite"
     }
 });

@@ -24,3 +24,24 @@ export type TMBDResult = {
   overview: string;
   original_language: string;
 }
+
+export type TMBDMovieImages = {
+  backdrops: TMBDImage[];
+  logos: TMBDImage[];
+  posters: TMBDImage[];
+}
+
+export type TMBDImage = {
+  file_path: string;
+  iso_639_1: string | null;
+  width: number;
+  height: number;
+}
+
+export type MovieImage = {
+  file: string;
+  language: string | null;
+  width: number;
+  height: number;
+  type: "poster" | "backdrop" | "logo";
+} 

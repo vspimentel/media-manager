@@ -3,6 +3,8 @@ CREATE TABLE `movies` (
 	`title` text NOT NULL,
 	`duration` text NOT NULL,
 	`folder` text NOT NULL,
+	`video_file` text NOT NULL,
+	`subtitle_file` text,
 	`poster` text,
 	`tmdb_id` integer,
 	`cache_key` text

@@ -18,9 +18,10 @@ function cacheRoot(): string {
  * Reads a JSON file from the cache if it exists and is not expired.
  * If the file does not exist or is expired, the file is deleted and undefined is returned.
  * @async
- * @param dir The directory within the cache.
- * @param key The key used to generate the filename.
+ * @param {string} dir - The directory within the cache.
+ * @param {string} key - The key used to generate the filename.
  * @returns {Promise<T | undefined>} The parsed JSON object or undefined if the file does not exist or is expired.
+ * @throws {Error} Throws an error if there is an issue reading or parsing the JSON file.
  */
 export async function readJsonCache<T>(dir: string, key: string): Promise<T | undefined> {
   const filePath = path.join(cacheRoot(), "data", dir, `${hash(key)}.json`);
@@ -29,8 +30,8 @@ export async function readJsonCache<T>(dir: string, key: string): Promise<T | un
     const stats = await fs.stat(filePath);
 
     if (Date.now() - stats.mtimeMs > CACHE_TTL) {
-        await fs.unlink(filePath);
-        return undefined;
+      await fs.unlink(filePath);
+      return undefined;
     }
 
     const contents = await fs.readFile(filePath, "utf8");
@@ -47,9 +48,9 @@ export async function readJsonCache<T>(dir: string, key: string): Promise<T | un
 /**
  * Creates a JSON file in the cache with the given value.
  * @async
- * @param dir The directory within the cache.
- * @param key The key used to generate the filename.
- * @param value The value to be written to the JSON file.
+ * @param {string} dir - The directory within the cache.
+ * @param {string} key - The key used to generate the filename.
+ * @param {T} value - The value to be written to the JSON file.
  * @returns {Promise<void>}
  */
 export async function writeJsonCache<T>(dir: string, key: string, value: T): Promise<void> {
@@ -64,8 +65,10 @@ export async function writeJsonCache<T>(dir: string, key: string, value: T): Pro
  * Gets a cached image file if it exists and is not expired. 
  * If the file does not exist or is expired, the file is deleted and undefined is returned.
  * @async
- * @param url The URL of the image.
+ * @param {string} dir - The directory within the cache.
+ * @param {string} url - The URL of the image.
  * @returns {Promise<string | undefined>} The path to the cached image file or undefined if it doesn't exist.
+ * @throws {Error} Throws an error if there is an issue accessing the cached image file.
  */
 export async function getCachedImage(dir: string, url: string): Promise<string | undefined> {
   const directory = path.join(cacheRoot(), "images", dir);
@@ -75,8 +78,8 @@ export async function getCachedImage(dir: string, url: string): Promise<string |
     const stats = await fs.stat(filePath);
 
     if (Date.now() - stats.mtimeMs > CACHE_TTL) {
-        await fs.unlink(filePath);
-        return undefined;
+      await fs.unlink(filePath);
+      return undefined;
     }
 
     return filePath;
@@ -89,10 +92,10 @@ export async function getCachedImage(dir: string, url: string): Promise<string |
 /**
  * Writes an image to the cache.
  * @async
- * @param dir The directory within the cache.
- * @param url The URL of the image.
- * @param bytes The image data as an ArrayBuffer.
- * @returns The path to the cached image file.
+ * @param {string} dir - The directory within the cache.
+ * @param {string} url - The URL of the image.
+ * @param {ArrayBuffer} bytes - The image data as an ArrayBuffer.
+ * @returns {Promise<string>} The path to the cached image file.
  */
 export async function writeImageCache(dir: string, url: string, bytes: ArrayBuffer): Promise<string> {
   const directory = path.join(cacheRoot(), "images", dir);
