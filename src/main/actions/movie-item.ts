@@ -1,13 +1,16 @@
 import { shell } from "electron";
 import { loadConfig } from "../services/config-service";
 import path from "node:path";
-import { getMovieInfo, getPoster } from "../services/movies-service";
 import { updateMovie } from "../database/services/movie-db-service";
 import { ResultResponse } from "../types/common";
+import { spawn } from "node:child_process"
+import { getMovieInfo, getTMDBImage } from "../services/tmbd-service";
+import langs from "langs";
 
 const config = loadConfig();
 
-const MOVIES_DIR = config.moviesDir;
+const MOVIES_FOLDER = config.moviesFolder;
+const VLC_PATH = config.VLCPath;
 
 /**
  * Opens the folder for a specific movie.
@@ -16,7 +19,7 @@ const MOVIES_DIR = config.moviesDir;
  * @returns {Promise<ResultResponse>} A promise that resolves to a ResultResponse indicating success or failure of the operation.
  */
 export async function openMovieFolder(folder: string): Promise<ResultResponse> {
-  const root = path.resolve(MOVIES_DIR);
+  const root = path.resolve(MOVIES_FOLDER);
   const target = path.resolve(root, folder);
 
   if (!target.startsWith(root + path.sep)) {
@@ -35,10 +38,54 @@ export async function openMovieFolder(folder: string): Promise<ResultResponse> {
  * @async
  * @param folder {string} The name of the movie folder. 
  * @param videoFile {string} The name of the video file to play.
+ * @param subtitleLanguage {string} The language of the subtitles to use.
+ * @param audioLanguage {string} The language of the audio to use.
  */
-export async function playMovie(folder: string, videoFile: string): Promise<ResultResponse> {
-  const filePath = path.resolve(MOVIES_DIR, folder, videoFile);
-  const root = path.resolve(MOVIES_DIR);
+export async function playMovie(folder: string, videoFile: string, subtitleLanguage: string, audioLanguage: string): Promise<ResultResponse> {
+  const filePath = path.resolve(MOVIES_FOLDER, folder, videoFile);
+  const root = path.resolve(MOVIES_FOLDER);
+
+  if (!filePath.startsWith(root + path.sep)) {
+    return { success: false, message: "Invalid file path" };
+  }
+
+  const args: string[] = [filePath];
+
+  if (audioLanguage && audioLanguage !== "und") {
+    const audioCode = langs.where("1", audioLanguage)?.["2B"] || audioLanguage;
+    args.push(`--audio-language=${audioCode}`);
+  }
+
+  if (subtitleLanguage && subtitleLanguage !== "und") {
+    const subtitlesCode = langs.where("1", subtitleLanguage)?.["2B"] || subtitleLanguage;
+    args.push(`--sub-language=${subtitlesCode}`);
+  }
+
+  console.log(args);
+
+  try {
+    const vlc = spawn(VLC_PATH, args, {
+      detached: true,
+      stdio: "ignore",
+    });
+
+    vlc.on("error", (err) => {
+      console.error("Failed to start VLC:", err);
+    });
+
+    vlc.unref();
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Failed to play movie: ${(error as Error).message}`,
+    };
+  }
+}
+
+export async function openSubtitlesFile(folder: string, subtitlesFile: string): Promise<ResultResponse> {
+  const filePath = path.resolve(MOVIES_FOLDER, folder, subtitlesFile);
+  const root = path.resolve(MOVIES_FOLDER);
 
   if (!filePath.startsWith(root + path.sep)) {
     return { success: false, message: "Invalid file path" };
@@ -46,10 +93,11 @@ export async function playMovie(folder: string, videoFile: string): Promise<Resu
 
   const error = await shell.openPath(filePath);
 
-  if (error) return { success: false, message: `Failed to play movie: ${error}` };
+  if (error) return { success: false, message: `Failed to open subtitles file: ${error}` };
 
   return { success: true };
 }
+
 
 /**
  * Fetches detailed movie information from TMDB for a given movie ID and updates the movie record in the database.
@@ -63,17 +111,25 @@ export async function changeMovie(movieId: number, tmbdId: number): Promise<Resu
 
   if (!movieInfo) return { success: false, message: `Failed to retrieve movie info for ID ${tmbdId}` };
 
+  let duration = "00h 00m";
   let poster = "";
+  let backdrop = "";
 
   if (movieInfo.poster_path) {
     try {
-      poster = await getPoster(movieInfo.poster_path);
+      poster = await getTMDBImage(movieInfo.poster_path);
     } catch (error) {
-      console.warn(`Failed to fetch poster for movie ID ${tmbdId}:`, error);
+      console.warn(`Failed to fetch poster for movie with ID ${tmbdId}:`, error);
     }
   }
 
-  let duration = "00h 00m";
+  if (movieInfo.backdrop_path) {
+    try {
+      backdrop = await getTMDBImage(movieInfo.backdrop_path);
+    } catch (error) {
+      console.warn(`Failed to fetch backdrop for movie with ID ${tmbdId}:`, error);
+    }
+  }
 
   if (movieInfo.runtime) {
     const hours = Math.floor(movieInfo.runtime / 60);
@@ -82,22 +138,36 @@ export async function changeMovie(movieId: number, tmbdId: number): Promise<Resu
   }
 
   updateMovie(movieId, {
+    tmbdId: movieInfo.id,
     title: movieInfo.title,
+    originalTitle: movieInfo.original_title,
+    originalLanguage: movieInfo.original_language,
+    tagline: movieInfo.tagline,
+    overview: movieInfo.overview,
+    releaseDate: movieInfo.release_date,
     duration,
-    tmbdId,
+    voteAverage: movieInfo.vote_average,
+    voteCount: movieInfo.vote_count,
     poster,
+    genres: JSON.stringify(movieInfo.genres),
+    countries: JSON.stringify(movieInfo.origin_country),
+    backdrop
   });
 
   return { success: true, message: "Movie updated successfully" };
 }
 
-
+/**
+ * Fetches a new poster for a given movie and updates the movie record in the database.
+ * @async
+ * @param {number} movieId - The ID of the movie in the database to update.
+ * @param {string} posterPath - The path to the new poster image.
+ * @returns {Promise<ResultResponse>} A promise that resolves to a ResultResponse indicating success or failure of the operation.
+ */
 export async function changeMoviePoster(movieId: number, posterPath: string): Promise<ResultResponse> {
-  const poster = await getPoster(posterPath);
+  const poster = await getTMDBImage(posterPath);
 
-  updateMovie(movieId, {
-    poster,
-  });
+  updateMovie(movieId, { poster });
 
   return { success: true, message: "Movie poster updated successfully" };
 }

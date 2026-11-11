@@ -1,19 +1,33 @@
-import {
-  integer,
-  sqliteTable,
-  text,
-} from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, real } from "drizzle-orm/sqlite-core";
 
 export const Movie = sqliteTable("movies", {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    title: text("title").notNull(),
-    duration: text("duration").notNull(),
-    folder: text("folder").notNull().unique(),
-    videoFile: text("video_file").notNull(),
-    subtitleFile: text("subtitle_file"),
-    poster: text("poster"),
-    tmbdId: integer("tmdb_id"),
-    cacheKey: text("cache_key"),
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  folder: text("folder").notNull().unique(),
+  videoFile: text("video_file").notNull(),
+  subtitlesFile: text("subtitles_file"),
+  filesize: integer("filesize"),
+  resolution: text("resolution"),
+  videoCodec: text("video_codec"),
+  audioCodecs: text("audio_codecs"),
+  audioLanguages: text("audio_languages"),
+  subtitleLanguages: text("subtitle_languages"),
+  selectedAudioLanguage: text("selected_audio_language"),
+  selectedSubtitleLanguage: text("selected_subtitle_language"),
+  cacheKey: text("cache_key"),
+  tmbdId: integer("tmdb_id"),
+  title: text("title"),
+  originalTitle: text("original_title"),
+  originalLanguage: text("original_language"),
+  tagline: text("tagline"),
+  overview: text("overview"),
+  releaseDate: text("release_date"),
+  duration: text("duration"),
+  voteAverage: real("vote_average"),
+  voteCount: integer("vote_count"),
+  poster: text("poster"),
+  genres: text("genres"),
+  countries: text("countries"),
+  backdrop: text("backdrop"),
 });
 
 export type Movie = typeof Movie.$inferSelect;

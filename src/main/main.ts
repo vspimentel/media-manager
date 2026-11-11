@@ -2,11 +2,12 @@ import './setup'
 import path from "path";
 import { app, protocol, net, BrowserWindow } from "electron";
 import { ipcMainHandle } from "./utils/electron";
-import { getMovieImages, getMovies, searchMovies } from "./services/movies-service";
+import { getMovie, getMovies } from "./services/movies-service";
 import { pathToFileURL } from "url";
-import { changeMovie, changeMoviePoster, openMovieFolder, playMovie } from "./actions/movie-item";
+import { changeMovie, changeMoviePoster, openMovieFolder, openSubtitlesFile, playMovie } from "./actions/movie-item";
 import { initializeDatabase } from "./database";
 import { isDev } from './utils/common';
+import { getMovieImages, searchMovies } from './services/tmbd-service';
 
 async function createWindow() {
   const win = new BrowserWindow({
@@ -31,6 +32,10 @@ async function createWindow() {
     return await getMovies(args.update);
   });
 
+  ipcMainHandle("getMovie", async (args) => {
+    return await getMovie(args.id);
+  });
+
   ipcMainHandle("searchMovies", async (args) => {
     return await searchMovies(args.title);
   });
@@ -41,11 +46,15 @@ async function createWindow() {
 
   // Movies actions
   ipcMainHandle("openMovieFolder", async (args) => {
-    return await openMovieFolder(args.folderName);
+    return await openMovieFolder(args.folder);
+  });
+
+  ipcMainHandle("openSubtitlesFile", async (args) => {
+    return await openSubtitlesFile(args.folder, args.subtitlesFile);
   });
 
   ipcMainHandle("playMovie", async (args) => {
-    return await playMovie(args.folder, args.videoFile);
+    return await playMovie(args.folder, args.videoFile, args.subtitleLanguage, args.audioLanguage);
   });
 
   ipcMainHandle("changeMovie", async (args) => {

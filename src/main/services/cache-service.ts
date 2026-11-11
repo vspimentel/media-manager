@@ -38,7 +38,6 @@ export async function readJsonCache<T>(dir: string, key: string): Promise<T | un
     return JSON.parse(contents) as T;
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      console.warn(`Cache file not found: ${filePath}`);
       return undefined;
     }
     throw error;

@@ -2,8 +2,8 @@ import MovieCard from "#components/movies/movie-card";
 import { Dialog } from "#components/ui/dialog";
 import { Button } from "#components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "#components/ui/input-group";
-import { useState } from "react";
-import { Film, Search, SlidersHorizontal, Sparkles, Tv, Gamepad2, Images, Settings, RefreshCw, ArrowDownWideNarrow, ChevronDown } from "lucide-react";
+import { use, useEffect, useRef, useState } from "react";
+import { Film, Search, SlidersHorizontal, Sparkles, Tv, Gamepad2, Images, Settings, RefreshCw, ArrowDownWideNarrow, ChevronDown, LayoutGrid, Grid2X2, List, AlignJustify } from "lucide-react";
 import { showToast } from "../utils/common";
 import { Movie } from "../types/movies";
 import MovieSelectionModal from "../modals/movies/movie-selection";
@@ -11,6 +11,8 @@ import MoviePosterSelectionModal from "../modals/movies/poster-selection";
 import { useGetMovies } from "#hooks/services/useGetMovies";
 
 const MovieListPage = () => {
+
+    const [layout, setLayout] = useState<"poster" | "compact" | "list" | "details">("poster");
 
     const { data: movies, update, isLoading, isRefetching, error } = useGetMovies();
 
@@ -23,7 +25,15 @@ const MovieListPage = () => {
         if (!error) showToast({ title: "Movie library updated", message: "Your movie library has been successfully updated.", type: "success" });
     }
 
+    const scrollRef = useRef<HTMLDivElement>(null);
 
+    useEffect(() => {
+        if (!isLoading && scrollRef.current) {
+            scrollRef.current.scrollTop = Number(
+                sessionStorage.getItem("movie-library-scroll") ?? 0
+            );
+        }
+    }, [isLoading]);
 
     return (
         <div className="mx-auto flex h-screen w-full max-w-[1800px] gap-6 p-5 text-white md:p-7">
@@ -68,28 +78,58 @@ const MovieListPage = () => {
                         </Button>
                     </div>
                 </header>
-                <div className="soft-scrollbar flex-1 overflow-y-auto p-5 pt-4 md:p-7 md:pt-6">
+                <div
+                    ref={scrollRef}
+                    onScroll={(event) => {
+                        sessionStorage.setItem(
+                            "movie-library-scroll",
+                            String(event.currentTarget.scrollTop)
+                        )
+                    }}
+                    className="soft-scrollbar flex-1 overflow-y-auto p-5 pt-4 md:p-7 md:pt-6"
+                >
                     <div className="mb-5 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2 text-xs text-white/45">
                             <span className="rounded-md border border-white/8 bg-white/5 px-2 py-1 font-medium tabular-nums text-white/75">{movies?.length ?? "—"}</span>
                             <span>titles in your library</span>
                         </div>
-                        <Button type="button" variant="ghost" className="h-9 gap-2 rounded-lg border border-white/8 bg-white/4 px-3 text-xs text-white/65 hover:border-white/15 hover:bg-white/8 hover:text-white">
-                            <ArrowDownWideNarrow size={14} className="text-cyan-100/65" />
-                            <span>Recently added</span>
-                            <ChevronDown size={14} className="text-white/35" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button type="button" variant="ghost" className="h-9 gap-2 rounded-lg border border-white/8 bg-white/4 px-3 text-xs text-white/65 hover:border-white/15 hover:bg-white/8 hover:text-white">
+                                <ArrowDownWideNarrow size={14} className="text-cyan-100/65" />
+                                <span>Recently added</span>
+                                <ChevronDown size={14} className="text-white/35" />
+                            </Button>
+                            <div className="relative">
+                                <label htmlFor="movie-layout" className="sr-only">Movie layout</label>
+                                <select
+                                    id="movie-layout"
+                                    value={layout}
+                                    onChange={(event) => setLayout(event.target.value as "poster" | "compact" | "list" | "details")}
+                                    className="h-9 appearance-none rounded-lg border border-white/8 bg-white/4 py-0 pl-8 pr-9 text-xs text-white/75 outline-none transition hover:border-white/15 hover:bg-white/8 focus-visible:border-cyan-100/30 focus-visible:ring-2 focus-visible:ring-cyan-100/15 [&>option]:bg-zinc-950 [&>option]:text-white"
+                                >
+                                    <option value="poster">Poster grid</option>
+                                    <option value="compact">Compact grid</option>
+                                    <option value="list">List</option>
+                                    <option value="details">Details</option>
+                                </select>
+                                <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-cyan-100/55">
+                                    {layout === "poster" ? <LayoutGrid size={13} /> : layout === "compact" ? <Grid2X2 size={13} /> : layout === "list" ? <List size={13} /> : <AlignJustify size={13} />}
+                                </span>
+                                <ChevronDown size={13} className="pointer-events-none absolute inset-y-0 right-3 my-auto text-white/35" />
+                            </div>
+                        </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:gap-x-5 md:gap-y-8 xl:grid-cols-4 2xl:grid-cols-5">
+                    <div className={layout === "poster" ? "grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:gap-x-5 md:gap-y-8 xl:grid-cols-4 2xl:grid-cols-5" : layout === "compact" ? "grid grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-4 md:gap-x-4 md:gap-y-6 xl:grid-cols-5 2xl:grid-cols-6" : "flex flex-col gap-3"}>
                         {movies?.map((movie) => (
                             <MovieCard
                                 key={movie.title}
                                 movie={movie}
                                 onChangeMovie={setMovieForChange}
                                 onChangePoster={setMovieForPosterChange}
+                                layout={layout}
                             />
                         ))}
-                        {isLoading && Array.from({ length: 10 }, (_, index) => <div key={index} className="animate-pulse"><div className="aspect-2/3 rounded-xl border border-white/6 bg-white/4.5" /><div className="mt-3 h-3 w-3/4 rounded bg-white/[0.07]" /><div className="mt-2 h-2.5 w-1/2 rounded bg-white/5" /></div>)}
+                        {isLoading && Array.from({ length: layout === "poster" || layout === "compact" ? 10 : 5 }, (_, index) => layout === "poster" || layout === "compact" ? <div key={index} className="animate-pulse"><div className="aspect-2/3 rounded-xl border border-white/6 bg-white/4.5" /><div className="mt-3 h-3 w-3/4 rounded bg-white/[0.07]" /><div className="mt-2 h-2.5 w-1/2 rounded bg-white/5" /></div> : <div key={index} className="h-32 animate-pulse rounded-2xl border border-white/6 bg-white/4.5" />)}
                         {error && <div className="col-span-full rounded-xl border border-white/10 bg-white/4 p-6 text-sm text-white/50">Your movie collection could not be loaded.</div>}
                     </div>
                 </div>

@@ -4,11 +4,11 @@ import PosterFallback from "#components/fallbacks/poster-fallback";
 import { Check, Clapperboard, Image, Languages } from "lucide-react"
 import { Movie } from "../../types/movies";
 import { MovieImage } from "../../../main/types/movies";
-import { LANGUAGE_MAPPINGS } from "../../utils/constants";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "#components/ui/button";
 import { useChangePoster } from "#hooks/actions/useChangePoster";
 import { showToast } from "../../utils/common";
+import langs from "langs";
 
 const MoviePosterSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: () => void }) => {
 
@@ -27,7 +27,7 @@ const MoviePosterSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: 
         }, {} as Record<string, MovieImage[]>);
 
         const groups = Object.entries(postersByLanguage).map(([language, posters]) => ({
-            language: LANGUAGE_MAPPINGS[language] || language,
+            language: language != 'nt' ? langs.where("1", language)?.name : "No Text",
             code: language.toUpperCase(),
             posters,
         }));
@@ -35,7 +35,7 @@ const MoviePosterSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: 
         groups.sort((a, b) => {
             if (a.code === "EN") return -1;
             if (b.code === "EN") return 1;
-            return a.language.localeCompare(b.language);
+            return (a.language ?? "").localeCompare(b.language ?? "");
         });
 
         const previewGroup = groups.find((group) => group.code === "EN") || groups[0];

@@ -21,6 +21,11 @@ export function loadConfig(): AppConfig {
 
   return {
     tmdbApiKey: config.tmdbApiKey ? config.tmdbApiKey : "",
-    moviesDir: config.moviesDir ? config.moviesDir : path.join("D:", "Movies")
+    moviesFolder: config.moviesFolder ? config.moviesFolder : path.join("D:", "Movies"),
+    VLCPath: config.VLCPath ? config.VLCPath : "",
+    preferences: {
+      audioLanguage: config.preferences?.audioLanguage ? config.preferences.audioLanguage : [],
+      subtitleLanguage: config.preferences?.subtitleLanguage ? config.preferences.subtitleLanguage : [],
+    }
   };
 }

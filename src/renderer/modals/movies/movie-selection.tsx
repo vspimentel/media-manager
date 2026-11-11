@@ -7,10 +7,20 @@ import { useSearchMovies } from "#hooks/services/useSearchMovies";
 import { showToast } from "../../utils/common";
 import { CalendarDays, Clapperboard, Globe, Search } from "lucide-react"
 import { Movie } from "../../types/movies";
+import { useState } from "react";
+import useDebounce from "#hooks/common/useDebounce";
 
 const MovieSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: () => void }) => {
 
-    const { data: movies, isLoading, error } = useSearchMovies(movie.title);
+    const [query, setQuery] = useState(movie.folder);
+
+    const debouncedQuery = useDebounce(query, 500);
+
+    const { data: movies, isLoading, error } = useSearchMovies(debouncedQuery);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setQuery(e.target.value);
+    };
 
     const getReleaseYear = (releaseDate?: string) => {
         if (!releaseDate || releaseDate === "NaN") {
@@ -56,7 +66,11 @@ const MovieSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: () => 
                 <h2 className="text-xl font-light tracking-tight">Choose the right movie</h2>
                 <p className="mt-1.5 text-sm text-white/50">Select a match for <span className="text-white/80">{movie.title}</span></p>
                 <InputGroup className="mt-5 rounded-xl border border-white/10 bg-white/4 px-2 h-11 text-sm text-white/40">
-                    <InputGroupInput placeholder="Search other movie titles..." />
+                    <InputGroupInput
+                        placeholder="Search other movie titles..."
+                        onChange={handleChange}
+                        value={query}
+                    />
                     <InputGroupAddon>
                         <Search size={16} />
                     </InputGroupAddon>
@@ -76,6 +90,7 @@ const MovieSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: () => 
                             {movie.poster_path ? (
                                 <img
                                     src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                                    alt={movie.title}
                                     className="h-full w-full rounded-lg object-cover border-white/10 bg-gradient-to-"
                                 />
 

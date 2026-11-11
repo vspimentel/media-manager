@@ -3,12 +3,14 @@ import { contextBridge, ipcRenderer } from "electron";
 contextBridge.exposeInMainWorld("electron", {
   // Movie services
   getMovies: (update: boolean) => ipcInvoke("getMovies", { update }),
+  getMovie: (id: number) => ipcInvoke("getMovie", { id }),
   searchMovies: (title: string) => ipcInvoke("searchMovies", { title }),
   getMovieImages: (tmbdId: number) => ipcInvoke("getMovieImages", { tmbdId }),
 
   // Movie actions
-  openMovieFolder: (folderName: string) => ipcInvoke("openMovieFolder", { folderName }),
-  playMovie: (folder: string, videoFile: string) => ipcInvoke("playMovie", { folder, videoFile }),
+  openMovieFolder: (folder: string) => ipcInvoke("openMovieFolder", { folder }),
+  playMovie: (folder: string, videoFile: string, subtitleLanguage: string, audioLanguage: string) => ipcInvoke("playMovie", { folder, videoFile, subtitleLanguage, audioLanguage }),
+  openSubtitlesFile: (folder: string, subtitlesFile: string) => ipcInvoke("openSubtitlesFile", { folder, subtitlesFile }),
   changeMovie: (movieId: number, tmbdId: number) => ipcInvoke("changeMovie", { movieId, tmbdId }),
   changeMoviePoster: (movieId: number, posterPath: string) => ipcInvoke("changeMoviePoster", { movieId, posterPath }),
 } satisfies Window["electron"]);

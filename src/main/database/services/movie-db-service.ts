@@ -1,5 +1,5 @@
 import { getDatabase } from "..";
-import { asc, eq } from "drizzle-orm";
+import { AnyColumn, asc, eq } from "drizzle-orm";
 import { Movie, NewMovie } from "../schema/movie";
 
 function db() {
@@ -7,12 +7,15 @@ function db() {
 }
 
 /**
- * Retrieves a movie from the database based on the provided folder path.
- * @param {string} folder - The folder path of the movie to retrieve. 
+ * Retrieves a movie from the database based on the provided field and value.
+ * @param {string} field - The field name to search by.
+ * @param {string} value - The value to search for in the specified field.
  * @returns {Movie | undefined} The movie if found, otherwise undefined.
  */
-export function getMovieByFolder(folder: string): Movie | undefined {
-  const movie = db().select().from(Movie).where(eq(Movie.folder, folder)).get();
+export function getMovieByField(field: string, value: string): Movie | undefined {
+  const column = (Movie as unknown as Record<string, AnyColumn>)[field];
+  if (!column) return undefined;
+  const movie = db().select().from(Movie).where(eq(column, value)).get();
   return movie;
 }
 

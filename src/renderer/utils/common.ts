@@ -24,3 +24,23 @@ export function showToast({ title, message, type = "info" }: { title: string; me
     type,
   });
 }
+
+export function formatDate(dateString: string | null): string {
+  if (!dateString) return "Unknown";
+
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "Unknown";
+
+  return date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+}
+
+
+export function getCountryName(code: string, language = "en") {
+  const parser = new Intl.DisplayNames([language], { type: "region" });
+
+  try {
+    return parser.of(code.toUpperCase());
+  } catch {
+    return "Unknown";
+  }
+}

@@ -14,6 +14,11 @@ export function useChangeMovie() {
 
       return result;
     },
-    onSuccess: () => client.invalidateQueries({ queryKey: ["movies"] })
+    onSuccess: async (_result, { movieId }) => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["movies"] }),
+        client.invalidateQueries({ queryKey: ["movie", movieId] }),
+      ]);
+    }
   });
 }
