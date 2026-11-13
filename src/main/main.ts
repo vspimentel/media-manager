@@ -4,10 +4,11 @@ import { app, protocol, net, BrowserWindow } from "electron";
 import { ipcMainHandle } from "./utils/electron";
 import { getMovie, getMovies } from "./services/movies-service";
 import { pathToFileURL } from "url";
-import { changeMovie, changeMoviePoster, openMovieFolder, openSubtitlesFile, playMovie } from "./actions/movie-item";
+import { changeMovie, changeMovieImage, openMovieFolder, openSubtitlesFile, playMovie } from "./actions/movie-item";
 import { initializeDatabase } from "./database";
 import { isDev } from './utils/common';
 import { getMovieImages, searchMovies } from './services/tmbd-service';
+import { updateMovieFiles } from './actions/movie-details';
 
 async function createWindow() {
   const win = new BrowserWindow({
@@ -41,7 +42,7 @@ async function createWindow() {
   });
 
   ipcMainHandle("getMovieImages", async (args) => {
-    return await getMovieImages(args.tmbdId);
+    return await getMovieImages(args.tmbdId, args.type);
   });
 
   // Movies actions
@@ -61,8 +62,13 @@ async function createWindow() {
     return await changeMovie(args.movieId, args.tmbdId);
   });
 
-  ipcMainHandle("changeMoviePoster", async (args) => {
-    return await changeMoviePoster(args.movieId, args.posterPath);
+  ipcMainHandle("changeMovieImage", async (args) => {
+    return await changeMovieImage(args.movieId, args.imagePath, args.type);
+  });
+
+  // Movie details actions
+  ipcMainHandle("updateMovieFiles", async (args) => {
+    return updateMovieFiles(args.movieId, args.folder);
   });
 }
 

@@ -38,10 +38,11 @@ export async function openMovieFolder(folder: string): Promise<ResultResponse> {
  * @async
  * @param folder {string} The name of the movie folder. 
  * @param videoFile {string} The name of the video file to play.
- * @param subtitleLanguage {string} The language of the subtitles to use.
- * @param audioLanguage {string} The language of the audio to use.
+ * @param subtitle {string} The language code of the subtitle to use, or the name of the subtitle file.
+ * @param audio {string} The language code of the audio track to use.
+ * @returns {Promise<ResultResponse>} A promise that resolves to a ResultResponse indicating success or failure of the operation.
  */
-export async function playMovie(folder: string, videoFile: string, subtitleLanguage: string, audioLanguage: string): Promise<ResultResponse> {
+export async function playMovie(folder: string, videoFile: string, subtitle: string, audio: string): Promise<ResultResponse> {
   const filePath = path.resolve(MOVIES_FOLDER, folder, videoFile);
   const root = path.resolve(MOVIES_FOLDER);
 
@@ -51,17 +52,21 @@ export async function playMovie(folder: string, videoFile: string, subtitleLangu
 
   const args: string[] = [filePath];
 
-  if (audioLanguage && audioLanguage !== "und") {
-    const audioCode = langs.where("1", audioLanguage)?.["2B"] || audioLanguage;
+  if (audio !== "und" && audio !== "") {
+    const audioCode = langs.where("1", audio)?.["2B"] || audio;
     args.push(`--audio-language=${audioCode}`);
   }
 
-  if (subtitleLanguage && subtitleLanguage !== "und") {
-    const subtitlesCode = langs.where("1", subtitleLanguage)?.["2B"] || subtitleLanguage;
+  if (subtitle.includes('.')) {
+    const subtitleFilePath = path.resolve(MOVIES_FOLDER, folder, subtitle);
+    if (!subtitleFilePath.startsWith(root + path.sep)) {
+      return { success: false, message: "Invalid subtitle file path" };
+    }
+    args.push(`--sub-file=${subtitleFilePath}`);
+  } else if (subtitle !== "und" && subtitle !== "none") {
+    const subtitlesCode = langs.where("1", subtitle)?.["2B"] || subtitle;
     args.push(`--sub-language=${subtitlesCode}`);
   }
-
-  console.log(args);
 
   try {
     const vlc = spawn(VLC_PATH, args, {
@@ -83,6 +88,12 @@ export async function playMovie(folder: string, videoFile: string, subtitleLangu
   }
 }
 
+/**
+ * Opens a subtitles file for a specific movie.
+ * @param {string} folder - The name of the movie folder.
+ * @param {string} subtitlesFile - The name of the subtitles file to open.
+ * @returns {Promise<ResultResponse>} A promise that resolves to a ResultResponse indicating success or failure of the operation.
+ */
 export async function openSubtitlesFile(folder: string, subtitlesFile: string): Promise<ResultResponse> {
   const filePath = path.resolve(MOVIES_FOLDER, folder, subtitlesFile);
   const root = path.resolve(MOVIES_FOLDER);
@@ -117,7 +128,7 @@ export async function changeMovie(movieId: number, tmbdId: number): Promise<Resu
 
   if (movieInfo.poster_path) {
     try {
-      poster = await getTMDBImage(movieInfo.poster_path);
+      poster = (await getTMDBImage(movieInfo.poster_path)).path;
     } catch (error) {
       console.warn(`Failed to fetch poster for movie with ID ${tmbdId}:`, error);
     }
@@ -125,7 +136,7 @@ export async function changeMovie(movieId: number, tmbdId: number): Promise<Resu
 
   if (movieInfo.backdrop_path) {
     try {
-      backdrop = await getTMDBImage(movieInfo.backdrop_path);
+      backdrop = (await getTMDBImage(movieInfo.backdrop_path)).path;
     } catch (error) {
       console.warn(`Failed to fetch backdrop for movie with ID ${tmbdId}:`, error);
     }
@@ -161,13 +172,14 @@ export async function changeMovie(movieId: number, tmbdId: number): Promise<Resu
  * Fetches a new poster for a given movie and updates the movie record in the database.
  * @async
  * @param {number} movieId - The ID of the movie in the database to update.
- * @param {string} posterPath - The path to the new poster image.
+ * @param {string} imagePath - The path to the new poster image.
+ * @param {string} type - The type of the image to change.
  * @returns {Promise<ResultResponse>} A promise that resolves to a ResultResponse indicating success or failure of the operation.
  */
-export async function changeMoviePoster(movieId: number, posterPath: string): Promise<ResultResponse> {
-  const poster = await getTMDBImage(posterPath);
+export async function changeMovieImage(movieId: number, imagePath: string, type: string): Promise<ResultResponse> {
+  const image = await getTMDBImage(imagePath);
 
-  updateMovie(movieId, { poster });
+  updateMovie(movieId, { [type]: image.path, [`${type}Filename`]: image.filename });
 
-  return { success: true, message: "Movie poster updated successfully" };
+  return { success: true, message: `Movie ${type} updated successfully` };
 }

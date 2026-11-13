@@ -45,9 +45,10 @@ export async function searchMovies(query: string): Promise<TMBDResult[]> {
  * If an error occurs during the fetch, it logs the error and returns an empty array.
  * @async
  * @param {number} tmdbId - The TMDB ID of the movie for which to fetch posters.
+ * @param {string} type - The type of images to fetch ("poster" or "backdrop").
  * @returns {Promise<MovieImage[]>} A promise that resolves to an array of MovieImage objects.
  */
-export async function getMovieImages(tmdbId: number): Promise<MovieImage[]> {
+export async function getMovieImages(tmdbId: number, type: string): Promise<MovieImage[]> {
 
     let images = await readJsonCache<TMBDMovieImages>("movies-images", tmdbId.toString());
 
@@ -84,8 +85,17 @@ export async function getMovieImages(tmdbId: number): Promise<MovieImage[]> {
         type: "poster",
     }));
 
-    return posters;
+    const backdrops: MovieImage[] = images.backdrops.map((backdrop: TMBDImage) => ({
+        file: backdrop.file_path,
+        language: backdrop.iso_639_1,
+        width: backdrop.width,
+        height: backdrop.height,
+        type: "backdrop",
+    }));
 
+    if (type === "poster") return posters;
+    else if (type === "backdrop") return backdrops;
+    else throw new Error(`Invalid image type: ${type}`);
 }
 
 /**
@@ -131,7 +141,7 @@ export async function getMovieInfo(tmdbId: number, cacheKey: string): Promise<TM
  * @returns {Promise<string>} A promise that resolves to the cached image URL or the original image URL if caching fails.
  * @throws {Error} Throws an error if the image request fails.
  */
-export async function getTMDBImage(imagePath: string): Promise<string> {
+export async function getTMDBImage(imagePath: string): Promise<{ path: string, filename: string }> {
     const imageUrl = `https://image.tmdb.org/t/p/original${imagePath}`;
 
     let image = await getCachedImage("movies", imageUrl);
@@ -152,6 +162,6 @@ export async function getTMDBImage(imagePath: string): Promise<string> {
         }
     }
 
-    return image ? pathToCacheURL(image) : imageUrl;
+    return image ? { path: pathToCacheURL(image), filename: imagePath } : { path: imageUrl, filename: imagePath };
 }
 

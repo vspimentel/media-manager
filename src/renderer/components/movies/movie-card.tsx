@@ -41,6 +41,7 @@ const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout = "poster" }: 
         });
     }
 
+    //TODO: Add support for multiple subtitle files and allow user to select which one to open
     const handleOpenSubtitlesFile = async (subtitlesFile: string) => {
         const result = await window.electron.openSubtitlesFile(movie.folder, subtitlesFile)
         if (!result.success) showToast({
@@ -57,29 +58,29 @@ const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout = "poster" }: 
                     <div className={`group ${layout === "poster" || layout === "compact" ? "flex flex-col" : ""} ${layout === "compact" ? "gap-2" : layout === "poster" ? "gap-3" : ""}`}>
                         {layout === "poster" || layout === "compact" ? (
                             <>
-                                <div className={`relative aspect-2/3 w-full overflow-hidden border border-white/10 bg-white/4 transition duration-300 group-hover:-translate-y-1 group-hover:border-white/25 group-hover:shadow-cyan-950/30 ${layout === "compact" ? "rounded-lg shadow-md" : "rounded-xl shadow-xl shadow-black/30"}`}>
+                                <Link to={`/movies/${movie.id}`} className={`relative aspect-2/3 w-full overflow-hidden border border-white/10 bg-white/4 transition duration-300 group-hover:-translate-y-1 group-hover:border-white/25 group-hover:shadow-cyan-950/30 ${layout === "compact" ? "rounded-lg shadow-md" : "rounded-xl shadow-xl shadow-black/30"}`}>
                                     {movie.poster ? <img src={movie.poster} alt={movie.title} className="h-full w-full object-cover" /> : <PosterFallback iconSize={50} />}
                                     <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/65 via-transparent to-white/4 opacity-80" />
                                     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-black/45 to-transparent" />
                                     <button type="button" aria-label={`Play ${movie.title}`} className={`absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/35 bg-white/20 text-white opacity-0 shadow-lg shadow-black/20 backdrop-blur-md transition-all hover:scale-95 group-hover:opacity-100 ${layout === "compact" ? "size-10" : "size-14"}`} onClick={handlePlayMovie}>
                                         <Play fill="currentColor" size={layout === "compact" ? 20 : 32} />
                                     </button>
-                                </div>
-                                <div className={`flex min-w-0 flex-col ${layout === "compact" ? "gap-0.5 px-0.5" : "gap-1 px-0.5"}`}>
-                                    <Link to={`/movies/${movie.id}`} className={`${layout === "compact" ? "text-xs" : "text-sm"} truncate font-medium tracking-tight text-white/90 transition hover:text-cyan-100`}>{movie.title}</Link>
+                                </Link>
+                                <Link to={`/movies/${movie.id}`} className={`flex min-w-0 flex-col ${layout === "compact" ? "gap-0.5 px-0.5" : "gap-1 px-0.5"}`}>
+                                    <div className={`${layout === "compact" ? "text-xs" : "text-sm"} truncate font-medium tracking-tight text-white/90 transition hover:text-cyan-100`}>{movie.title}</div>
                                     <div className="text-[11px] font-light tracking-wide text-white/40">{movie.duration}</div>
-                                </div>
+                                </Link>
                             </>
                         ) : layout === "list" ? (
-                            <div className="flex min-h-32 items-center gap-5 rounded-2xl border border-white/8 bg-white/2.5 p-4 transition hover:border-white/15 hover:bg-white/4.5 sm:min-h-36 sm:gap-6 sm:p-5">
+                            <Link to={`/movies/${movie.id}`} className="flex min-h-32 items-center gap-5 rounded-2xl border border-white/8 bg-white/2.5 p-4 transition hover:border-white/15 hover:bg-white/4.5 sm:min-h-36 sm:gap-6 sm:p-5">
                                 <div className="h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/5 sm:h-28 sm:w-19">
                                     {movie.poster ? <img src={movie.poster} alt={`${movie.title} poster`} className="h-full w-full object-cover" /> : <PosterFallback iconSize={22} />}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <Link to={`/movies/${movie.id}`} className="block truncate text-base font-medium tracking-tight text-white/90 transition hover:text-cyan-100 sm:text-lg">{movie.title}</Link>
+                                    <div className="block truncate text-base font-medium tracking-tight text-white/90 transition hover:text-cyan-100 sm:text-lg">{movie.title}</div>
                                     <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-white/45">
                                         <span>{movie.duration || "Runtime —"}</span>
-                                        <span>{movie.subtitlesFile ? "Subtitles available" : "No subtitles"}</span>
+                                        <span>{movie.subtitleFiles ? "Subtitles available" : "No subtitles"}</span>
                                         <span>Release year —</span>
                                         <span>Rating —</span>
                                     </div>
@@ -88,9 +89,9 @@ const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout = "poster" }: 
                                 <button type="button" aria-label={`Play ${movie.title}`} className="flex size-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/65 transition hover:border-cyan-100/25 hover:bg-cyan-100/10 hover:text-cyan-50" onClick={handlePlayMovie}>
                                     <Play size={16} fill="currentColor" />
                                 </button>
-                            </div>
+                            </Link>
                         ) : (
-                            <div className="rounded-2xl border border-white/8 bg-white/2.5 p-4 transition hover:border-white/15 hover:bg-white/4.5 sm:p-5">
+                            <Link to={`/movies/${movie.id}`} className="rounded-2xl border border-white/8 bg-white/2.5 p-4 transition hover:border-white/15 hover:bg-white/4.5 sm:p-5">
                                 <div className="flex flex-col gap-5 sm:flex-row">
                                     <div className="h-44 w-29 shrink-0 self-center overflow-hidden rounded-xl border border-white/10 bg-white/5 sm:self-start">
                                         {movie.poster ? <img src={movie.poster} alt={`${movie.title} poster`} className="h-full w-full object-cover" /> : <PosterFallback iconSize={30} />}
@@ -124,7 +125,7 @@ const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout = "poster" }: 
                                 </div>
                                 <div className="mt-5 grid grid-cols-3 gap-3 border-t border-white/6 pt-4">
                                     {[
-                                        ["Subtitles", movie.subtitlesFile ? "Available" : "None"],
+                                        ["Subtitles", movie.subtitleFiles ? "Available" : "None"],
                                         ["Audio language", "—"],
                                         ["Video quality", "—"],
                                     ].map(([label, value]) => (
@@ -134,7 +135,7 @@ const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout = "poster" }: 
                                         </div>
                                     ))}
                                 </div>
-                            </div>
+                            </Link>
                         )}
                     </div>
                 </ContextMenuTrigger>
@@ -145,8 +146,8 @@ const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout = "poster" }: 
                     >
                         Open folder
                     </ContextMenuItem>
-                    {movie.subtitlesFile && (
-                        <ContextMenuItem className="rounded-lg px-2 py-1 text-sm font-light data-highlighted:bg-white/10 data-highlighted:text-white" onClick={() => handleOpenSubtitlesFile(movie.subtitlesFile!)}>
+                    {movie.subtitleFiles && (
+                        <ContextMenuItem className="rounded-lg px-2 py-1 text-sm font-light data-highlighted:bg-white/10 data-highlighted:text-white" onClick={() => handleOpenSubtitlesFile(movie.subtitleFiles![0])}>
                             Open subtitles
                         </ContextMenuItem>
                     )}

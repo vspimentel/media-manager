@@ -2,7 +2,7 @@ export type MovieFolder = {
   path: string;
   name: string;
   videoFile: string;
-  subtitlesFile?: string;
+  subtitlesFiles: string[];
 };
 
 export type MovieImage = {
@@ -24,4 +24,9 @@ export type MovieMetadata = {
   audioCodecs: string[];
   audioLanguages: string[];
   subtitleLanguages: string[];
+}
+
+export type MovieLocalSubtitle = {
+  file: string;
+  language: string;
 }

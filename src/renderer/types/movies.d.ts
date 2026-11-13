@@ -2,7 +2,7 @@ export type Movie = {
   id: number;
   folder: string;
   videoFile: string;
-  subtitlesFile: string | null;
+  subtitleFiles: string | null;
   filesize: number;
   resolution: string | null;
   videoCodec: string | null;
@@ -23,9 +23,11 @@ export type Movie = {
   voteAverage: number | null;
   voteCount: number | null;
   poster: string | null;
+  posterFilename: string | null;
+  backdrop: string | null;
+  backdropFilename: string | null;
   genres: string | null;
   countries: string | null;
-  backdrop: string | null;
 };
 
 export type Genre = {

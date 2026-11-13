@@ -1,6 +1,6 @@
 import path from "node:path";
 import fs from "fs";
-import { MovieFolder, MovieMetadata } from "../types/movies";
+import { MovieFolder, MovieLocalSubtitle, MovieMetadata } from "../types/movies";
 import pLimit from "p-limit";
 import { readJsonCache } from "./cache-service";
 import { loadConfig } from "./config-service";
@@ -8,8 +8,7 @@ import { Movie } from "../database/schema/movie";
 import { deleteMovie, getAllMovies, getMovieByField, saveMovie } from "../database/services/movie-db-service";
 import { TMBDDetails } from "../types/tmdb";
 import { getMovieInfo, getTMDBImage, searchMovies } from "./tmbd-service";
-import { getMovieMetadata } from "./ffmpeg-service";
-import langs from "langs"
+import { getMovieMetadata, getSubtitleLanguage } from "./metadata-service";
 
 const config = loadConfig();
 
@@ -49,7 +48,8 @@ export async function getMovie(id: number): Promise<Movie | undefined> {
  */
 async function getMoviesFromFolder(): Promise<Movie[]> {
   const movieFolders = await getMovieFolders();
-  const formattedMovieFolders = formatMovieFolders(movieFolders);
+  const formattedMovieFolders = movieFolders.map(formatMovieFolder)
+    .filter((folder): folder is MovieFolder => folder !== null);
   cleanUpMovies(formattedMovieFolders);
   const limit = pLimit(5);
   const movies = await Promise.all(
@@ -95,32 +95,28 @@ async function getMovieFolders(): Promise<string[]> {
 
 /**
  * Formats an array of movie folder names into an array of MovieFolder objects.
- * @param {string[]} folders - An array of movie folder names.
- * @returns {MovieFolder[]} An array of MovieFolder objects containing the folder path, name, video file, and optional subtitle file.
+ * @param {string} folder - The name of the movie folder to format.
+ * @returns {MovieFolder | null} A MovieFolder object containing the folder path, name, video file, and optional subtitle file, or null if the folder is invalid.
  */
-function formatMovieFolders(folders: string[]): MovieFolder[] {
-  const movieFolders = folders.map((folder) => {
-    const folderName = folder;
-    const folderPath = path.join(MOVIES_FOLDER, folder);
-    const videoFile = fs.readdirSync(folderPath).find((file) => {
-      const ext = path.extname(file).toLowerCase();
-      return ext === ".mp4" || ext === ".mkv";
-    });
-    if (!videoFile) return null;
-    const subtitlesFile = fs.readdirSync(folderPath).find((file) => {
-      const ext = path.extname(file).toLowerCase();
-      return ext === ".srt" || ext === ".ass";
-    });
-    return {
-      path: folderPath,
-      name: folderName,
-      videoFile: videoFile,
-      subtitlesFile: subtitlesFile,
-    } as MovieFolder;
+export function formatMovieFolder(folder: string): MovieFolder | null {
+  const folderName = folder;
+  const folderPath = path.join(MOVIES_FOLDER, folder);
+  const videoFile = fs.readdirSync(folderPath).find((file) => {
+    const ext = path.extname(file).toLowerCase();
+    return ext === ".mp4" || ext === ".mkv";
   });
-  return movieFolders.filter(
-    (folder): folder is MovieFolder => folder !== null,
-  );
+  if (!videoFile) return null;
+  const subtitlesFiles = fs.readdirSync(folderPath).filter((file) => {
+    const ext = path.extname(file).toLowerCase();
+    return ext === ".srt" || ext === ".ass";
+  });
+  return {
+    path: folderPath,
+    name: folderName,
+    videoFile: videoFile,
+    subtitlesFiles: subtitlesFiles,
+  } as MovieFolder;
+
 }
 
 /**
@@ -141,6 +137,26 @@ async function getMovieData(folder: MovieFolder): Promise<Movie> {
     metadata = await getMovieMetadata(folder.path, folder.videoFile);
   } catch (error) {
     console.error(`Failed to get metadata for movie "${folder.name}":`, error);
+  }
+
+  let subtitleFiles: MovieLocalSubtitle[] = [];
+
+  if (folder.subtitlesFiles.length > 0) {
+    subtitleFiles = folder.subtitlesFiles.map((subtitleFile, index) => {
+      try {
+        const language = getSubtitleLanguage(folder.path, subtitleFile);
+        return {
+          file: subtitleFile,
+          language: `${language}-${index + 1}`,
+        };
+      } catch (error) {
+        console.error(`Failed to read subtitle language for movie "${folder.name}" and subtitle file "${subtitleFile}":`, error);
+        return {
+          file: subtitleFile,
+          language: `und-${index + 1}`,
+        };
+      }
+    });
   }
 
   const cacheKey = folder.name.trim().toLowerCase();
@@ -165,7 +181,7 @@ async function getMovieData(folder: MovieFolder): Promise<Movie> {
 
   if (movieInfo.poster_path) {
     try {
-      poster = await getTMDBImage(movieInfo.poster_path);
+      poster = (await getTMDBImage(movieInfo.poster_path)).path;
     } catch (error) {
       console.warn(`Failed to fetch poster for movie "${folder.name}":`, error);
     }
@@ -173,7 +189,7 @@ async function getMovieData(folder: MovieFolder): Promise<Movie> {
 
   if (movieInfo.backdrop_path) {
     try {
-      backdrop = await getTMDBImage(movieInfo.backdrop_path);
+      backdrop = (await getTMDBImage(movieInfo.backdrop_path)).path;
     } catch (error) {
       console.warn(`Failed to fetch backdrop for movie "${folder.name}":`, error);
     }
@@ -188,18 +204,28 @@ async function getMovieData(folder: MovieFolder): Promise<Movie> {
   const selectPreferredLanguage = (available: string[], preferred: string[]): string => {
     for (let preferredLang of preferred) {
       if (preferredLang === "original") preferredLang = movieInfo?.original_language || "";
-      if (available.includes(preferredLang)) return preferredLang;
+      for (const availableLang of available) {
+        if (availableLang.split("-")[0] === preferredLang) {
+          return availableLang;
+        }
+      }
     }
     return available[0] || "";
   };
 
+  const availableSubtitleLanguages = [
+    ...new Set([
+      ...subtitleFiles.map((subtitle) => subtitle.language),
+      ...(metadata?.subtitleLanguages || [])
+    ])
+  ];
   const selectedAudioLanguage = selectPreferredLanguage(metadata?.audioLanguages || [], preferredAudioLanguages);
-  const selectedSubtitleLanguage = selectPreferredLanguage(metadata?.subtitleLanguages || [], preferredSubtitleLanguages);
+  const selectedSubtitleLanguage = selectPreferredLanguage(availableSubtitleLanguages || [], preferredSubtitleLanguages);
 
   return saveMovie({
     folder: folder.name,
     videoFile: folder.videoFile,
-    subtitlesFile: folder.subtitlesFile || null,
+    subtitleFiles: JSON.stringify(subtitleFiles),
     resolution: JSON.stringify(metadata?.resolution || { tag: "", width: 0, height: 0 }),
     videoCodec: metadata?.videoCodec || "",
     audioCodecs: JSON.stringify(metadata?.audioCodecs || []),
@@ -220,8 +246,10 @@ async function getMovieData(folder: MovieFolder): Promise<Movie> {
     voteAverage: movieInfo.vote_average,
     voteCount: movieInfo.vote_count,
     poster,
+    posterFilename: movieInfo.poster_path,
+    backdrop,
+    backdropFilename: movieInfo.backdrop_path,
     genres: JSON.stringify(movieInfo.genres),
     countries: JSON.stringify(movieInfo.origin_country),
-    backdrop
   });
 }

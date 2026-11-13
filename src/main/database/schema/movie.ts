@@ -4,7 +4,7 @@ export const Movie = sqliteTable("movies", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   folder: text("folder").notNull().unique(),
   videoFile: text("video_file").notNull(),
-  subtitlesFile: text("subtitles_file"),
+  subtitleFiles: text("subtitle_files"),
   filesize: integer("filesize"),
   resolution: text("resolution"),
   videoCodec: text("video_codec"),
@@ -25,9 +25,11 @@ export const Movie = sqliteTable("movies", {
   voteAverage: real("vote_average"),
   voteCount: integer("vote_count"),
   poster: text("poster"),
-  genres: text("genres"),
-  countries: text("countries"),
+  posterFilename: text("poster_filename"),
   backdrop: text("backdrop"),
+  backdropFilename: text("backdrop_filename"),
+  genres: text("genres"),
+  countries: text("countries")
 });
 
 export type Movie = typeof Movie.$inferSelect;

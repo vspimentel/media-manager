@@ -129,7 +129,15 @@ const MovieListPage = () => {
                                 layout={layout}
                             />
                         ))}
-                        {isLoading && Array.from({ length: layout === "poster" || layout === "compact" ? 10 : 5 }, (_, index) => layout === "poster" || layout === "compact" ? <div key={index} className="animate-pulse"><div className="aspect-2/3 rounded-xl border border-white/6 bg-white/4.5" /><div className="mt-3 h-3 w-3/4 rounded bg-white/[0.07]" /><div className="mt-2 h-2.5 w-1/2 rounded bg-white/5" /></div> : <div key={index} className="h-32 animate-pulse rounded-2xl border border-white/6 bg-white/4.5" />)}
+                        {isLoading &&
+                            Array.from({ length: layout === "poster" || layout === "compact" ? 10 : 8 }, (_, index) => layout === "poster" || layout === "compact" ?
+                                <div key={index} className="animate-pulse">
+                                    <div className="aspect-2/3 rounded-xl border border-white/6 bg-white/4.5" />
+                                    <div className="mt-3 h-3 w-3/4 rounded bg-white/[0.07]" />
+                                    <div className="mt-2 h-2.5 w-1/2 rounded bg-white/5" />
+                                </div>
+                                : <div key={index} className="h-32 animate-pulse rounded-2xl border border-white/6 bg-white/4.5" />
+                            )}
                         {error && <div className="col-span-full rounded-xl border border-white/10 bg-white/4 p-6 text-sm text-white/50">Your movie collection could not be loaded.</div>}
                     </div>
                 </div>

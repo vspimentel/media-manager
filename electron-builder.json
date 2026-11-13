@@ -9,11 +9,12 @@
     "dist-renderer/**/*",
     "drizzle/**/*"
   ],
-  "icon": "./assets/icon.png",
+  "icon": "./assets/icon.ico",
   "win": {
     "target": [
       "portable",
       "msi"
     ]
-  }
+  },
+  "npmRebuild": false
 }

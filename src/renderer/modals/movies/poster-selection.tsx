@@ -1,18 +1,18 @@
 import { DialogContent } from "#components/ui/dialog"
-import { useGetMoviePosters } from "#hooks/services/useGetMoviePosters";
 import PosterFallback from "#components/fallbacks/poster-fallback";
 import { Check, Clapperboard, Image, Languages } from "lucide-react"
 import { Movie } from "../../types/movies";
 import { MovieImage } from "../../../main/types/movies";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "#components/ui/button";
-import { useChangePoster } from "#hooks/actions/useChangePoster";
 import { showToast } from "../../utils/common";
 import langs from "langs";
+import { useGetMovieImages } from "#hooks/services/useGetMoviePosters";
+import { useChangeImage } from "#hooks/actions/useChangePoster";
 
 const MoviePosterSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: () => void }) => {
 
-    const { data, isLoading, error } = useGetMoviePosters(movie.tmbdId);
+    const { data, isLoading, error } = useGetMovieImages(movie.tmbdId, "poster");
 
     const { posterGroups, previewGroup, previewPoster } = useMemo(() => {
         const posters = (data ?? []) as MovieImage[];
@@ -51,22 +51,27 @@ const MoviePosterSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: 
     const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
 
     useEffect(() => {
-        setSelectedLanguage(previewGroup?.code || null);
-        if (previewPoster) setSelectedPoster((currentPoster) => currentPoster ?? previewPoster);
-    }, [previewGroup, previewPoster]);
+        if (movie.posterFilename) {
+            const currentPoster = posterGroups.flatMap(group => group.posters).find((poster) => poster.file === movie.posterFilename);
+            setSelectedPoster(currentPoster ?? null);
+            setSelectedLanguage(currentPoster?.language || null);
+        } else {
+            setSelectedPoster(previewPoster);
+            setSelectedLanguage(previewGroup?.code || null);
+        }
+    }, [posterGroups, previewPoster, previewGroup, movie.posterFilename]);
 
     const handleSelectPoster = (poster: MovieImage, language: string | null) => {
         setSelectedPoster(poster);
         setSelectedLanguage(language);
     };
 
-    const changePoster = useChangePoster();
+    const changePoster = useChangeImage();
 
     const handleChangePoster = async () => {
         if (!selectedPoster) return
         try {
-            const result = await changePoster.mutateAsync({ movieId: movie.id, posterPath: selectedPoster.file });
-
+            const result = await changePoster.mutateAsync({ movieId: movie.id, imagePath: selectedPoster.file, type: "poster" });
             showToast({
                 title: "Action successful",
                 message: result.message,
