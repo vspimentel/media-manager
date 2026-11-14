@@ -3,7 +3,7 @@ import { Button } from "#components/ui/button";
 import { ArrowLeft, CalendarDays, Clapperboard, Clock3, ExternalLink, FilePlus2, Film, Folder, FolderOpen, Globe2, Languages, Play, RefreshCcw, Search, Star, Subtitles } from "lucide-react";
 import { Link, useParams } from "react-router";
 import { useGetMovie } from "#hooks/services/useGetMovie";
-import { useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Genre, Movie } from "../types/movies";
 import { formatDate, getCountryName, showToast } from "../utils/common";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "#components/ui/context-menu";
@@ -14,12 +14,21 @@ import langs from "langs";
 import MoviePosterSelectionModal from "../modals/movies/poster-selection";
 import MovieBackgroundSelectionModal from "../modals/movies/background-selection";
 import { useUpdateMovieFiles } from "#hooks/actions/useUpdateMovieFiles";
+import { useQueryClient } from "@tanstack/react-query";
 import { MovieLocalSubtitle } from "../../main/types/movies";
+import { useAddSubtitleFile } from "#hooks/actions/useAddSubtitleFile";
 
 const MovieDetailsPage = () => {
     const { movieId } = useParams();
     const { data, isLoading, error } = useGetMovie(Number(movieId));
     const movie = data as Movie | undefined;
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (isLoading || !movieId || !scrollRef.current) return;
+        const savedScroll = localStorage.getItem(`movie-details-scroll-${movieId}`);
+        scrollRef.current.scrollTop = Number(savedScroll ?? 0);
+    }, [isLoading, movieId]);
 
     const { resolution, extension, audioCodecs, audioLanguagesItems, subtitleFiles, subtitleLanguagesItems, genres, countries } = useMemo(() => {
         const resolution: { tag: string; width: number; height: number } = movie?.resolution ? JSON.parse(movie.resolution) : { tag: "", width: 0, height: 0 };
@@ -45,11 +54,11 @@ const MovieDetailsPage = () => {
                 value: language,
                 label: language != "und" ? langs.where("1", language)?.name || language : "Unknown",
             })),
-            ...subtitleFiles.map((subtitleFile: MovieLocalSubtitle, index: number) => {
+            ...subtitleFiles.map((subtitleFile: MovieLocalSubtitle) => {
                 const language = subtitleFile.language.split("-")[0];
                 return {
                     value: subtitleFile.language,
-                    label: `${language != "und" ? langs.where("1", language)?.name || language : "Unknown"} (File ${index + 1})`,
+                    label: `${language != "und" ? langs.where("1", language)?.name || language : "Unknown"} (File)`,
                 }
             }),
         ]
@@ -79,6 +88,30 @@ const MovieDetailsPage = () => {
 
     const [subtitleLanguage, setSubtitleLanguage] = useState<string>("none");
     const [subtitleFile, setSubtitleFile] = useState<string | null>(null);
+
+    const subtitleInputRef = useRef<HTMLInputElement>(null);
+
+    const addSubtitleFile = useAddSubtitleFile();
+
+    const handleAddSubtitleFile = async (file: File) => {
+        if (!movie) return;
+        try {
+            const result = await addSubtitleFile.mutateAsync({ movieId: movie.id, folder: movie.folder, subtitleFile: file });
+
+            showToast({
+                title: "Action successful",
+                message: result.message,
+                type: "success",
+            });
+
+        } catch (error) {
+            showToast({
+                title: "Action failed",
+                message: error instanceof Error ? error.message : "An unexpected error occurred",
+                type: "error",
+            });
+        }
+    };
 
     const handleSubtitleChange = (value: string) => {
         setSubtitleLanguage(value);
@@ -155,7 +188,13 @@ const MovieDetailsPage = () => {
 
 
     return (
-        <div className="mx-auto flex h-screen w-full max-w-[1800px] flex-col overflow-y-auto p-4 text-white md:p-7">
+        <div
+            ref={scrollRef}
+            onScroll={(event) => {
+                if (movieId) localStorage.setItem(`movie-details-scroll-${movieId}`, String(event.currentTarget.scrollTop));
+            }}
+            className="soft-scrollbar mx-auto flex h-screen w-full max-w-[1800px] flex-col overflow-y-auto p-4 text-white md:p-7"
+        >
             <ContextMenu open={openBackdropMenu} onOpenChange={setOpenBackdropMenu}>
                 <ContextMenuTrigger className="relative isolate min-h-140 shrink-0 overflow-hidden rounded-3xl border border-white/10 bg-zinc-950 shadow-2xl md:min-h-155">
                     <img
@@ -404,7 +443,23 @@ const MovieDetailsPage = () => {
                                 {subtitleFile ? subtitleFile : 'No subtitle file selected'}
                             </div>
                             <div className="mt-2.5 grid grid-cols-2 gap-2">
-                                <Button type="button" variant="ghost" size="sm" className="h-8 justify-start gap-1.5 rounded-lg border border-white/8 px-2 text-[11px] text-white/50">
+                                <input
+                                    ref={subtitleInputRef}
+                                    type="file"
+                                    accept=".srt,.vtt,.ass,.ssa,.sub,.idx,.txt"
+                                    className="hidden"
+                                    onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                                        const file = event.target.files?.[0];
+                                        if (file) handleAddSubtitleFile(file);
+                                    }}
+                                />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-full justify-start gap-1.5 rounded-lg border border-white/8 px-2 text-[11px] text-white/50"
+                                    onClick={() => subtitleInputRef.current?.click()}
+                                >
                                     <FilePlus2 size={13} />
                                     Add file
                                 </Button>

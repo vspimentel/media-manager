@@ -8,7 +8,7 @@ import { changeMovie, changeMovieImage, openMovieFolder, openSubtitlesFile, play
 import { initializeDatabase } from "./database";
 import { isDev } from './utils/common';
 import { getMovieImages, searchMovies } from './services/tmbd-service';
-import { updateMovieFiles } from './actions/movie-details';
+import { addSubtitleFile, updateMovieFiles } from './actions/movie-details';
 
 async function createWindow() {
   const win = new BrowserWindow({
@@ -30,7 +30,7 @@ async function createWindow() {
 
   // Movies services
   ipcMainHandle("getMovies", async (args) => {
-    return await getMovies(args.update);
+    return await getMovies(args.update, args.sortBy, args.sortDirection);
   });
 
   ipcMainHandle("getMovie", async (args) => {
@@ -69,6 +69,10 @@ async function createWindow() {
   // Movie details actions
   ipcMainHandle("updateMovieFiles", async (args) => {
     return updateMovieFiles(args.movieId, args.folder);
+  });
+
+  ipcMainHandle("addSubtitleFile", async (args) => {
+    return addSubtitleFile(args.movieId, args.folder, args.sourcePath);
   });
 }
 

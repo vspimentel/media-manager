@@ -4,12 +4,12 @@ import { useRef } from "react";
 /**
  * Fetches a list of movies using React Query.
  */
-export function useGetMovies() {
+export function useGetMovies(sortBy: string, sortDirection: string) {
   const updateRef = useRef(false);
 
   const query = useQuery({
-    queryKey: ["movies"],
-    queryFn: () => window.electron.getMovies(updateRef.current),
+    queryKey: ["movies", sortBy, sortDirection],
+    queryFn: () => window.electron.getMovies(updateRef.current, sortBy, sortDirection),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,

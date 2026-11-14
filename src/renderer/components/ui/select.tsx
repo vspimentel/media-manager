@@ -5,7 +5,7 @@ import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
 export type SelectItem = {
   "value": string | null
-  "label": string
+  "label": any
 }
 
 const Select = SelectPrimitive.Root

@@ -90,7 +90,7 @@ export function getSubtitleLanguage(folder: string, subtitleFile: string): strin
     const content = fsSync.readFileSync(path.join(folder, subtitleFile), "utf-8");
     let text = "";
 
-    if (ext === ".srt" || ext === ".vtt") {
+    if (ext === ".srt" || ext === ".vtt" || ext === ".sub" || ext === ".idx" || ext === ".txt") {
         text = content
             .replace(/^\uFEFF/, "")
             .split(/\r?\n/)

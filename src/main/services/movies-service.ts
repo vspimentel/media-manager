@@ -21,10 +21,12 @@ const preferredSubtitleLanguages = config.preferences.subtitleLanguage || ["eng"
  * Otherwise, it retrieves the data from the cache.
  * @async
  * @param update - A boolean indicating whether to update the movie data.
+ * @param sortBy - The field to sort the movies by.
+ * @param sortDirection - The direction to sort the movies in.
  * @returns {Promise<Movie[]>} An array of movie data objects.
  */
-export async function getMovies(update: boolean): Promise<Movie[]> {
-  const movies = getAllMovies();
+export async function getMovies(update: boolean, sortBy: string, sortDirection: string): Promise<Movie[]> {
+  const movies = getAllMovies(sortBy, sortDirection);
   if (movies.length == 0 || update) return getMoviesFromFolder();
   else return movies;
 }
@@ -108,7 +110,7 @@ export function formatMovieFolder(folder: string): MovieFolder | null {
   if (!videoFile) return null;
   const subtitlesFiles = fs.readdirSync(folderPath).filter((file) => {
     const ext = path.extname(file).toLowerCase();
-    return ext === ".srt" || ext === ".ass";
+    return [".srt", ".vtt", ".ass", ".ssa", ".sub", ".idx", ".txt"].includes(ext);
   });
   return {
     path: folderPath,

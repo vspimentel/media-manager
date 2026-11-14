@@ -1,8 +1,8 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, webUtils } from "electron";
 
 contextBridge.exposeInMainWorld("electron", {
   // Movie services
-  getMovies: (update: boolean) => ipcInvoke("getMovies", { update }),
+  getMovies: (update: boolean, sortBy: string, sortDirection: string) => ipcInvoke("getMovies", { update, sortBy, sortDirection }),
   getMovie: (id: number) => ipcInvoke("getMovie", { id }),
   searchMovies: (title: string) => ipcInvoke("searchMovies", { title }),
   getMovieImages: (tmbdId: number, type: string) => ipcInvoke("getMovieImages", { tmbdId, type }),
@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld("electron", {
 
   // Movie details actions
   updateMovieFiles: (movieId: number, folder: string) => ipcInvoke("updateMovieFiles", { movieId, folder }),
+  addSubtitleFile: (movieId: number, folder: string, file: File) => ipcInvoke("addSubtitleFile", { movieId, folder, sourcePath: webUtils.getPathForFile(file) }),
 } satisfies Window["electron"]);
 
 function ipcInvoke<Key extends keyof EventPayloadMapping>(

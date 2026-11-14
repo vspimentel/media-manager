@@ -1,5 +1,5 @@
 import { getDatabase } from "..";
-import { AnyColumn, asc, eq } from "drizzle-orm";
+import { AnyColumn, asc, desc, eq } from "drizzle-orm";
 import { Movie, NewMovie } from "../schema/movie";
 
 function db() {
@@ -21,10 +21,16 @@ export function getMovieByField(field: string, value: string): Movie | undefined
 
 /**
  * Retrieves all movies from the database, ordered by their folder paths.
+ * @param {string} sortBy - The field to sort the movies by.
+ * @param {string} sortDirection - The direction to sort the movies in.
  * @returns {Movie[]} An array of all movies in the database.
  */
-export function getAllMovies(): Movie[] {
-  const movies = db().select().from(Movie).orderBy(asc(Movie.folder)).all();
+export function getAllMovies(sortBy?: string, sortDirection?: string): Movie[] {
+  const column = sortBy ? (Movie as unknown as Record<string, AnyColumn>)[sortBy] : undefined;
+  if (!column) throw new Error(`Invalid sorting field: ${sortBy}`);
+  const movies = sortDirection && sortDirection === "asc"
+    ? db().select().from(Movie).orderBy(asc(column)).all()
+    : db().select().from(Movie).orderBy(desc(column)).all();
   return movies;
 }
 

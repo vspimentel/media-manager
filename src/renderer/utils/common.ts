@@ -34,6 +34,24 @@ export function formatDate(dateString: string | null): string {
   return date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 }
 
+export function formatDateShort(dateString: string | null): string {
+  if (!dateString) return "Unknown";
+
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "Unknown";
+
+  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+export function getYearFromDate(dateString: string | null): string {
+  if (!dateString) return "Unknown";
+
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "Unknown";
+
+  return date.getFullYear().toString();
+}
+
 
 export function getCountryName(code: string, language = "en") {
   const parser = new Intl.DisplayNames([language], { type: "region" });

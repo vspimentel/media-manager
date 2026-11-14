@@ -10,7 +10,7 @@ declare global {
 
   type EventRequestMapping = {
     // Movie services
-    getMovies: { update: boolean };
+    getMovies: { update: boolean, sortBy: string, sortDirection: string };
     getMovie: { id: number };
     searchMovies: { title: string };
     getMovieImages: { tmbdId: number; type: string };
@@ -24,6 +24,7 @@ declare global {
 
     // Movie details actions
     updateMovieFiles: { movieId: number; folder: string };
+    addSubtitleFile: { movieId: number; folder: string; sourcePath: string };
   };
 
   type EventPayloadMapping = {
@@ -42,12 +43,13 @@ declare global {
 
     // Movie details actions
     updateMovieFiles: ResultResponse;
+    addSubtitleFile: ResultResponse;
   };
 
   interface Window {
     electron: {
       // Movie services
-      getMovies: (update: boolean) => Promise<Movie[]>;
+      getMovies: (update: boolean, sortBy: string, sortDirection: string) => Promise<Movie[]>;
       getMovie: (id: number) => Promise<Movie | undefined>;
       searchMovies: (title: string) => Promise<TMBDResult[]>;
       getMovieImages: (tmbdId: number, type: string) => Promise<MovieImage[]>;
@@ -61,6 +63,7 @@ declare global {
 
       // Movie details actions
       updateMovieFiles: (movieId: number, folder: string) => Promise<ResultResponse>;
+      addSubtitleFile: (movieId: number, folder: string, file: File) => Promise<ResultResponse>;
     };
   }
 }
