@@ -112,11 +112,16 @@ export function formatMovieFolder(folder: string): MovieFolder | null {
     const ext = path.extname(file).toLowerCase();
     return [".srt", ".vtt", ".ass", ".ssa", ".sub", ".idx", ".txt"].includes(ext);
   });
+  const torrentFile = fs.readdirSync(folderPath).find((file) => {
+    const ext = path.extname(file).toLowerCase();
+    return ext === ".torrent";
+  });
   return {
     path: folderPath,
     name: folderName,
     videoFile: videoFile,
     subtitlesFiles: subtitlesFiles,
+    torrentFile: torrentFile,
   } as MovieFolder;
 
 }
@@ -227,6 +232,7 @@ async function getMovieData(folder: MovieFolder): Promise<Movie> {
   return saveMovie({
     folder: folder.name,
     videoFile: folder.videoFile,
+    torrentFile: folder.torrentFile,
     subtitleFiles: JSON.stringify(subtitleFiles),
     resolution: JSON.stringify(metadata?.resolution || { tag: "", width: 0, height: 0 }),
     videoCodec: metadata?.videoCodec || "",

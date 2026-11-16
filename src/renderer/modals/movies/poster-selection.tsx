@@ -7,8 +7,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "#components/ui/button";
 import { showToast } from "../../utils/common";
 import langs from "langs";
-import { useGetMovieImages } from "#hooks/services/useGetMoviePosters";
-import { useChangeImage } from "#hooks/actions/useChangePoster";
+import { useGetMovieImages } from "#hooks/services/movies/useGetMoviePosters";
+import { useChangeImage } from "#hooks/actions/movies/useChangePoster";
 
 const MoviePosterSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: () => void }) => {
 

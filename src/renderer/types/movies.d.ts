@@ -3,6 +3,7 @@ export type Movie = {
   folder: string;
   videoFile: string;
   subtitleFiles: string | null;
+  torrentFile: string | null;
   filesize: number;
   resolution: string | null;
   videoCodec: string | null;

@@ -4,14 +4,18 @@ import { app, protocol, net, BrowserWindow } from "electron";
 import { ipcMainHandle } from "./utils/electron";
 import { getMovie, getMovies } from "./services/movies-service";
 import { pathToFileURL } from "url";
-import { changeMovie, changeMovieImage, openMovieFolder, openSubtitlesFile, playMovie } from "./actions/movie-item";
+import { changeMovie, changeMovieImage, openMovieFolder, playMovie } from "./actions/movie-item";
 import { initializeDatabase } from "./database";
 import { isDev } from './utils/common';
 import { getMovieImages, searchMovies } from './services/tmbd-service';
-import { addSubtitleFile, updateMovieFiles } from './actions/movie-details';
+import { addSubtitleFile, addTorrentFile, openLocalFile, updateMovieFiles } from './actions/movie-details';
+import { isLoggedInToLetterboxd, loginToLetterboxd, logoutFromLetterboxd } from './services/letterboxd-service';
 
 async function createWindow() {
   const win = new BrowserWindow({
+    frame: false,
+    minWidth: 900,
+    minHeight: 600,
     webPreferences: {
       preload: path.join(__dirname, "../preload/preload.js"),
       contextIsolation: true,
@@ -27,6 +31,27 @@ async function createWindow() {
   } else {
     await win.loadFile(path.join(__dirname, "../../dist-renderer/index.html"));
   }
+
+  // Window controls
+  ipcMainHandle("windowMinimize", () => {
+    win.minimize();
+    return true;
+  });
+
+  ipcMainHandle("windowToggleMaximize", () => {
+    if (win.isMaximized()) win.unmaximize();
+    else win.maximize();
+    return win.isMaximized();
+  });
+
+  ipcMainHandle("windowClose", () => {
+    win.close();
+    return true;
+  });
+
+  ipcMainHandle("windowIsMaximized", () => {
+    return win.isMaximized();
+  });
 
   // Movies services
   ipcMainHandle("getMovies", async (args) => {
@@ -50,10 +75,6 @@ async function createWindow() {
     return await openMovieFolder(args.folder);
   });
 
-  ipcMainHandle("openSubtitlesFile", async (args) => {
-    return await openSubtitlesFile(args.folder, args.subtitlesFile);
-  });
-
   ipcMainHandle("playMovie", async (args) => {
     return await playMovie(args.folder, args.videoFile, args.subtitleLanguage, args.audioLanguage);
   });
@@ -71,8 +92,29 @@ async function createWindow() {
     return updateMovieFiles(args.movieId, args.folder);
   });
 
+  ipcMainHandle("openLocalFile", async (args) => {
+    return await openLocalFile(args.folder, args.file);
+  });
+
   ipcMainHandle("addSubtitleFile", async (args) => {
     return addSubtitleFile(args.movieId, args.folder, args.sourcePath);
+  });
+
+  ipcMainHandle("addTorrentFile", async (args) => {
+    return addTorrentFile(args.movieId, args.folder, args.sourcePath);
+  });
+
+  // Options services
+  ipcMainHandle("isLoggedInToLetterboxd", async () => {
+    return await isLoggedInToLetterboxd();
+  });
+
+  ipcMainHandle("loginToLetterboxd", async () => {
+    return await loginToLetterboxd(win);
+  });
+
+  ipcMainHandle("logoutFromLetterboxd", async () => {
+    return await logoutFromLetterboxd();
   });
 }
 

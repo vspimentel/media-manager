@@ -2,7 +2,7 @@ import PosterFallback from "#components/fallbacks/poster-fallback";
 import { Button } from "#components/ui/button";
 import { ArrowLeft, CalendarDays, Clapperboard, Clock3, ExternalLink, FilePlus2, Film, Folder, FolderOpen, Globe2, Languages, Play, RefreshCcw, Search, Star, Subtitles } from "lucide-react";
 import { Link, useParams } from "react-router";
-import { useGetMovie } from "#hooks/services/useGetMovie";
+import { useGetMovie } from "#hooks/services/movies/useGetMovie";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Genre, Movie } from "../types/movies";
 import { formatDate, getCountryName, showToast } from "../utils/common";
@@ -13,22 +13,15 @@ import prettyBytes from "pretty-bytes";
 import langs from "langs";
 import MoviePosterSelectionModal from "../modals/movies/poster-selection";
 import MovieBackgroundSelectionModal from "../modals/movies/background-selection";
-import { useUpdateMovieFiles } from "#hooks/actions/useUpdateMovieFiles";
-import { useQueryClient } from "@tanstack/react-query";
+import { useUpdateMovieFiles } from "#hooks/actions/movies/useUpdateMovieFiles";
 import { MovieLocalSubtitle } from "../../main/types/movies";
-import { useAddSubtitleFile } from "#hooks/actions/useAddSubtitleFile";
+import { useAddSubtitleFile } from "#hooks/actions/movies/useAddSubtitleFile";
+import { useAddTorrentFile } from "#hooks/actions/movies/useAddTorrentFile";
 
 const MovieDetailsPage = () => {
     const { movieId } = useParams();
     const { data, isLoading, error } = useGetMovie(Number(movieId));
     const movie = data as Movie | undefined;
-    const scrollRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (isLoading || !movieId || !scrollRef.current) return;
-        const savedScroll = localStorage.getItem(`movie-details-scroll-${movieId}`);
-        scrollRef.current.scrollTop = Number(savedScroll ?? 0);
-    }, [isLoading, movieId]);
 
     const { resolution, extension, audioCodecs, audioLanguagesItems, subtitleFiles, subtitleLanguagesItems, genres, countries } = useMemo(() => {
         const resolution: { tag: string; width: number; height: number } = movie?.resolution ? JSON.parse(movie.resolution) : { tag: "", width: 0, height: 0 };
@@ -69,67 +62,6 @@ const MovieDetailsPage = () => {
         return { resolution, extension, audioCodecs, audioLanguagesItems, subtitleFiles, subtitleLanguagesItems, genres, countries };
     }, [movie]);
 
-    const [openPosterMenu, setOpenPosterMenu] = useState(false);
-
-    useEffect(() => {
-        const handleScroll = () => setOpenPosterMenu(false);
-        window.addEventListener("scroll", handleScroll, true);
-        return () => window.removeEventListener("scroll", handleScroll, true);
-    }, []);
-
-    const [openBackdropMenu, setOpenBackdropMenu] = useState(false);
-
-    useEffect(() => {
-        const handleScroll = () => setOpenBackdropMenu(false);
-        window.addEventListener("scroll", handleScroll, true);
-        return () => window.removeEventListener("scroll", handleScroll, true);
-    }, []);
-
-
-    const [subtitleLanguage, setSubtitleLanguage] = useState<string>("none");
-    const [subtitleFile, setSubtitleFile] = useState<string | null>(null);
-
-    const subtitleInputRef = useRef<HTMLInputElement>(null);
-
-    const addSubtitleFile = useAddSubtitleFile();
-
-    const handleAddSubtitleFile = async (file: File) => {
-        if (!movie) return;
-        try {
-            const result = await addSubtitleFile.mutateAsync({ movieId: movie.id, folder: movie.folder, subtitleFile: file });
-
-            showToast({
-                title: "Action successful",
-                message: result.message,
-                type: "success",
-            });
-
-        } catch (error) {
-            showToast({
-                title: "Action failed",
-                message: error instanceof Error ? error.message : "An unexpected error occurred",
-                type: "error",
-            });
-        }
-    };
-
-    const handleSubtitleChange = (value: string) => {
-        setSubtitleLanguage(value);
-        if (value.includes("-")) {
-            const subtitle = subtitleFiles.find((subtitle) => subtitle.language === value);
-            setSubtitleFile(subtitle ? subtitle.file : null);
-        }
-    }
-
-    const [audioLanguage, setAudioLanguage] = useState<string>("");
-
-    useEffect(() => {
-        if (!movie) return;
-        setSubtitleLanguage(movie.selectedSubtitleLanguage || "none");
-        setAudioLanguage(movie.selectedAudioLanguage || "");
-        setSubtitleFile(subtitleFiles[0]?.file || null);
-    }, [movie]);
-
     const handlePlayMovie = async () => {
         if (!movie) return;
         const result = await window.electron.playMovie(movie.folder, movie.videoFile, subtitleFile ? subtitleFile : subtitleLanguage, audioLanguage);
@@ -139,6 +71,28 @@ const MovieDetailsPage = () => {
             type: "error",
         });
     }
+
+    const handleOpenFolder = async () => {
+        if (!movie) return;
+        const result = await window.electron.openMovieFolder(movie.folder);
+        if (!result.success) showToast({
+            title: "Error opening folder",
+            message: result.message,
+            type: "error",
+        });
+    }
+
+    const [openPosterMenu, setOpenPosterMenu] = useState(false);
+    const [openBackdropMenu, setOpenBackdropMenu] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setOpenPosterMenu(false);
+            setOpenBackdropMenu(false);
+        };
+        window.addEventListener("scroll", handleScroll, true);
+        return () => window.removeEventListener("scroll", handleScroll, true);
+    }, []);
 
     const [openPosterSelection, setOpenPosterSelection] = useState(false);
 
@@ -152,12 +106,32 @@ const MovieDetailsPage = () => {
         setOpenBackgroundSelection(true);
     };
 
-    const changePoster = useUpdateMovieFiles();
+    const [audioLanguage, setAudioLanguage] = useState<string>("");
 
-    const handleChangePoster = async () => {
+    useEffect(() => {
+        if (!movie) return;
+        setSubtitleLanguage(movie.selectedSubtitleLanguage || "none");
+        setAudioLanguage(movie.selectedAudioLanguage || "");
+        setSubtitleFile(subtitleFiles[0]?.file || null);
+    }, [movie]);
+
+    const [subtitleLanguage, setSubtitleLanguage] = useState<string>("none");
+    const [subtitleFile, setSubtitleFile] = useState<string | null>(null);
+
+    const handleSubtitleChange = (value: string) => {
+        setSubtitleLanguage(value);
+        if (value.includes("-")) {
+            const subtitle = subtitleFiles.find((subtitle) => subtitle.language === value);
+            setSubtitleFile(subtitle ? subtitle.file : null);
+        }
+    }
+
+    const updateFiles = useUpdateMovieFiles();
+
+    const handleUpdateFiles = async () => {
         if (!movie) return;
         try {
-            const result = await changePoster.mutateAsync({ movieId: movie.id, folder: movie.folder });
+            const result = await updateFiles.mutateAsync({ movieId: movie.id, folder: movie.folder });
             showToast({
                 title: "Action successful",
                 message: result.message,
@@ -172,13 +146,69 @@ const MovieDetailsPage = () => {
         }
     }
 
+    const handleOpenLocalFile = async (file: string) => {
+        if (!movie) return;
+        const result = await window.electron.openLocalFile(movie.folder, file);
+        if (!result.success) showToast({
+            title: "Error opening file",
+            message: result.message,
+            type: "error",
+        });
+    }
+
+    const subtitleInputRef = useRef<HTMLInputElement>(null);
+
+    const addSubtitleFile = useAddSubtitleFile();
+
+    const handleAddSubtitleFile = async (file: File) => {
+        if (!movie) return;
+        try {
+            const result = await addSubtitleFile.mutateAsync({ movieId: movie.id, folder: movie.folder, subtitleFile: file });
+            showToast({
+                title: "Action successful",
+                message: result.message,
+                type: "success",
+            });
+
+        } catch (error) {
+            showToast({
+                title: "Action failed",
+                message: error instanceof Error ? error.message : "An unexpected error occurred",
+                type: "error",
+            });
+        }
+    };
+
+    const torrentInputRef = useRef<HTMLInputElement>(null);
+
+    const addTorrentFile = useAddTorrentFile();
+
+    const handleAddTorrentFile = async (file: File) => {
+        if (!movie) return;
+        try {
+            const result = await addTorrentFile.mutateAsync({ movieId: movie.id, folder: movie.folder, torrentFile: file });
+            showToast({
+                title: "Action successful",
+                message: result.message,
+                type: "success",
+            });
+
+        } catch (error) {
+            showToast({
+                title: "Action failed",
+                message: error instanceof Error ? error.message : "An unexpected error occurred",
+                type: "error",
+            });
+        }
+    };
+
     if (isLoading) {
-        return <div className="mx-auto flex h-screen w-full max-w-375 items-center justify-center p-6 text-sm text-white/45">Loading movie details…</div>;
+        return <div className="mx-auto flex h-full w-full max-w-375 items-center justify-center p-6 text-sm text-white/45">Loading movie details…</div>;
     }
 
     if (error || !movie) {
         return (
-            <div className="mx-auto flex h-screen w-full max-w-375 flex-col items-center justify-center gap-4 p-6 text-center">
+            <div className="mx-auto flex h-full w-full max-w-375 flex-col items-center justify-center gap-4 p-6 text-center">
                 <div className="flex size-14 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white/45"><Film size={24} /></div>
                 <div><h1 className="text-lg font-medium text-white/85">Movie not found</h1><p className="mt-1 text-sm text-white/40">This title is not available in your library.</p></div>
                 <Button render={<Link to="/" />} variant="ghost" className="rounded-xl border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"><ArrowLeft /> Back to library</Button>
@@ -188,13 +218,7 @@ const MovieDetailsPage = () => {
 
 
     return (
-        <div
-            ref={scrollRef}
-            onScroll={(event) => {
-                if (movieId) localStorage.setItem(`movie-details-scroll-${movieId}`, String(event.currentTarget.scrollTop));
-            }}
-            className="soft-scrollbar mx-auto flex h-screen w-full max-w-[1800px] flex-col overflow-y-auto p-4 text-white md:p-7"
-        >
+        <div className="soft-scrollbar mx-auto flex h-full w-full max-w-[1800px] flex-col overflow-y-auto p-4 text-white md:p-7">
             <ContextMenu open={openBackdropMenu} onOpenChange={setOpenBackdropMenu}>
                 <ContextMenuTrigger className="relative isolate min-h-140 shrink-0 overflow-hidden rounded-3xl border border-white/10 bg-zinc-950 shadow-2xl md:min-h-155">
                     <img
@@ -245,18 +269,28 @@ const MovieDetailsPage = () => {
                                 </div>
                                 <p className="mt-3 max-w-2xl text-sm text-white/60 font-semibold">{movie.tagline}</p>
                                 <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-white/50">
-                                    <span className="flex items-center gap-1.5"><Clock3 size={14} />{movie.duration || "Runtime unavailable"}</span>
-                                    <span className="flex items-center gap-1.5"><CalendarDays size={14} /> {formatDate(movie.releaseDate)}</span>
-                                    <span className="flex items-center gap-1.5"><Star size={14} className="text-white/50" />{movie.voteAverage?.toFixed(1) || "0.0"} / 10</span>
-                                    <span className="flex items-center gap-1.5"><Globe2 size={14} />{countries.join(", ") || "Unknown"}</span>
-                                    <span className="flex items-center gap-1.5"><Languages size={14} />{movie?.originalLanguage && langs.where("1", movie.originalLanguage)?.name || "Unknown"}</span>
+                                    <span className="flex items-center gap-1.5">
+                                        <Clock3 size={14} />{movie.duration || "Runtime unavailable"}
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <CalendarDays size={14} /> {formatDate(movie.releaseDate)}
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <Star size={14} className="text-white/50" />{movie.voteAverage?.toFixed(1) || "-"}/10
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <Globe2 size={14} />{countries.join(", ") || "Unknown"}
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <Languages size={14} />{movie?.originalLanguage && langs.where("1", movie.originalLanguage)?.name || "Unknown"}
+                                    </span>
                                 </div>
                                 <p className="mt-6 max-w-3xl text-sm leading-7 text-white/65 md:text-base">{movie.overview}</p>
                                 <div className="mt-7 flex flex-wrap gap-3">
                                     <Button onClick={handlePlayMovie} type="button" className="h-11 gap-2 rounded-xl bg-cyan-100 px-5 text-zinc-950 hover:bg-cyan-50">
                                         <Play size={16} fill="currentColor" />Play movie
                                     </Button>
-                                    <Button type="button" variant="ghost" className="h-11 gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-white/75 hover:bg-white/10 hover:text-white">
+                                    <Button onClick={handleOpenFolder} type="button" variant="ghost" className="h-11 gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-white/75 hover:bg-white/10 hover:text-white">
                                         <FolderOpen size={16} />Open folder
                                     </Button>
                                     <Button type="button" variant="ghost" className="h-11 gap-2 rounded-xl border border-emerald-200/15 bg-emerald-300/5 px-4 text-emerald-100/75 hover:bg-emerald-300/10 hover:text-emerald-50"><Star size={14} />
@@ -280,10 +314,16 @@ const MovieDetailsPage = () => {
                 <section className="flex flex-col rounded-2xl border border-white/8 bg-linear-to-br from-white/4.5 to-black/20 p-5 shadow-xl shadow-black/10 md:p-6">
                     <div className="mb-4 flex items-center justify-between gap-3 border-b border-white/8 pb-4">
                         <div>
-                            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-white/55"><Film size={14} className="text-cyan-100/70" />Media metadata</div>
-                            <p className="mt-1 text-[11px] text-white/35">Technical specs & track preferences</p>
+                            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-white/55"><Film size={14} className="text-cyan-100/70" />
+                                Video metadata
+                            </div>
+                            <p className="mt-1 text-[11px] text-white/35">
+                                Technical specs & track preferences
+                            </p>
                         </div>
-                        <span className="rounded-full border border-cyan-200/10 bg-cyan-200/5 px-2 py-1 text-[9px] uppercase tracking-wider text-cyan-100/55">Video file</span>
+                        <span className="rounded border border-cyan-200/10 bg-cyan-200/5 px-2 py-1 text-[9px] uppercase tracking-wider text-cyan-100/55">
+                            Video file
+                        </span>
                     </div>
                     <div className="grid grid-cols-2 gap-2.5">
                         <div className="flex items-center gap-3 rounded-xl border border-white/8 bg-linear-to-br from-white/5.5 to-white/1.5 p-3.5">
@@ -413,7 +453,7 @@ const MovieDetailsPage = () => {
                             <Folder size={14} className="text-cyan-100/60" /> Local files
                         </div>
                         <Button
-                            onClick={handleChangePoster}
+                            onClick={handleUpdateFiles}
                             size="xs" type="button"
                             className="border-white/15 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white"
                         >
@@ -426,20 +466,26 @@ const MovieDetailsPage = () => {
                         <div className="rounded-xl border border-white/7 bg-white/2.5 p-3">
                             <div className="mb-1.5 flex justify-between text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">
                                 <span>Movie file</span>
-                                <span className="rounded border border-white/8 bg-white/5 px-1.5 py-0.5 text-[9px]">VIDEO</span>
+                                <span className="rounded border text-[9px] px-1.5 py-0.5 border-cyan-200/10 bg-cyan-200/5 text-cyan-100/70">VIDEO</span>
                             </div>
-                            <div className="truncate text-xs text-white/75">
+                            <div
+                                className={`truncate text-xs text-white/75 ${movie.videoFile ? "hover:text-white/90 hover:underline cursor-pointer" : ""}`}
+                                onClick={() => handleOpenLocalFile(movie.videoFile)}
+                            >
                                 {movie.videoFile}
                             </div>
                         </div>
                         <div className="rounded-xl border border-white/7 bg-white/2.5 p-3">
                             <div className="mb-1.5 flex items-center justify-between text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">
                                 <span>Subtitle file</span>
-                                <span className="rounded border border-cyan-200/10 bg-cyan-200/5 px-1.5 py-0.5 text-[9px] text-cyan-100/70">
+                                <span className={`rounded border text-[9px] px-1.5 py-0.5 ${subtitleFiles.length ? "border-cyan-200/10 bg-cyan-200/5 text-cyan-100/70" : "border-white/8 bg-white/5"}`}>
                                     {subtitleFiles.length > 0 ? `${subtitleFiles.length} ${subtitleFiles.length === 1 ? 'FILE' : 'FILES'}` : 'NO FILES'}
                                 </span>
                             </div>
-                            <div className="truncate text-xs text-white/75">
+                            <div
+                                className={`truncate text-xs text-white/75 ${subtitleFile ? "hover:text-white/90 hover:underline cursor-pointer" : ""}`}
+                                onClick={() => subtitleFile && handleOpenLocalFile(subtitleFile)}
+                            >
                                 {subtitleFile ? subtitleFile : 'No subtitle file selected'}
                             </div>
                             <div className="mt-2.5 grid grid-cols-2 gap-2">
@@ -472,15 +518,38 @@ const MovieDetailsPage = () => {
                         <div className="rounded-xl border border-white/7 bg-white/2.5 p-3">
                             <div className="mb-1.5 flex justify-between text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">
                                 <span>Torrent file</span>
-                                <span className="rounded border border-white/8 bg-white/5 px-1.5 py-0.5 text-[9px]">OPTIONAL</span>
+                                <span className={`rounded border px-1.5 py-0.5 text-[9px] ${movie.torrentFile ? "border-cyan-200/10 bg-cyan-200/5 text-cyan-100/70" : "border-white/8 bg-white/5"}`}>
+                                    {movie.torrentFile ? "TORRENT" : "NO FILE"}
+                                </span>
                             </div>
-                            <div className="text-xs text-white/45">
-                                No torrent file added
+                            <div
+                                className={`truncate text-xs text-white/75 ${movie.torrentFile ? "hover:text-white/90 hover:underline cursor-pointer" : ""}`}
+                                onClick={() => movie.torrentFile && handleOpenLocalFile(movie.torrentFile)}
+                            >
+                                {movie.torrentFile ? movie.torrentFile : "No torrent file added"}
                             </div>
-                            <Button type="button" variant="ghost" size="sm" className="mt-2 h-8 w-full justify-start gap-2 rounded-lg border border-dashed border-white/10 text-xs text-white/50">
-                                <FilePlus2 size={14} />
-                                Add torrent file
-                            </Button>
+                            <div>
+                                <input
+                                    ref={torrentInputRef}
+                                    type="file"
+                                    accept=".torrent"
+                                    className="hidden"
+                                    onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                                        const file = event.target.files?.[0];
+                                        if (file) handleAddTorrentFile(file);
+                                    }}
+                                />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="mt-2 h-8 w-full justify-start gap-2 rounded-lg border border-dashed border-white/10 text-xs text-white/50"
+                                    onClick={() => torrentInputRef.current?.click()}
+                                >
+                                    <FilePlus2 size={14} />
+                                    Add torrent file
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </aside>

@@ -92,10 +92,18 @@ const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout }: { movie: Mo
                                 <div className="min-w-0 flex-1">
                                     <div className="block truncate text-base font-medium tracking-tight text-white/90 transition hover:text-cyan-100 sm:text-lg">{movie.title}</div>
                                     <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-white/45">
-                                        <span className="flex items-center gap-1.5"><Clock3 size={14} />{movie.duration || "Runtime unavailable"}</span>
-                                        <span className="flex items-center gap-1.5"><CalendarDays size={14} /> {formatDate(movie.releaseDate)}</span>
-                                        <span className="flex items-center gap-1.5"><Star size={14} className="text-white/50" />{movie.voteAverage?.toFixed(1) || "0.0"} / 10</span>
-                                        <span className="flex items-center gap-1.5"><Globe2 size={14} />{countries.join(", ") || "Unknown"}</span>
+                                        <span className="flex items-center gap-1.5">
+                                            <Clock3 size={14} />{movie.duration || "Runtime unavailable"}
+                                        </span>
+                                        <span className="flex items-center gap-1.5">
+                                            <CalendarDays size={14} /> {formatDate(movie.releaseDate)}
+                                        </span>
+                                        <span className="flex items-center gap-1.5">
+                                            <Star size={14} className="text-white/50" />{movie.voteAverage?.toFixed(1) || "-"} / 10
+                                        </span>
+                                        <span className="flex items-center gap-1.5">
+                                            <Globe2 size={14} />{countries.join(", ") || "Unknown"}
+                                        </span>
                                     </div>
                                     <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-white/35">
                                         {movie.overview || "Synopsis not found for this movie."}
@@ -117,7 +125,9 @@ const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout }: { movie: Mo
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="min-w-0">
-                                                <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-cyan-100/45">Movie details</div>
+                                                <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-cyan-100/45">
+                                                    Movie details
+                                                </div>
                                                 <div className="block text-lg font-medium tracking-tight text-white/90 sm:text-xl">
                                                     {movie.title}
                                                 </div>
@@ -131,8 +141,8 @@ const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout }: { movie: Mo
                                             {[
                                                 ["Runtime", movie.duration || "—"],
                                                 ["Release date", formatDateShort(movie.releaseDate)],
-                                                ["Rating", `${movie.voteAverage?.toFixed(1)}/10.0` || "0.0/10.0"],
-                                                ["Countries", countries.join(", ") || "Unknown"],
+                                                ["TMDB Rating", `${movie.voteAverage?.toFixed(1)}/10.0` || "-/10.0"],
+                                                ["Country", countries[0] || "Unknown"],
                                                 ["Language", movie?.originalLanguage && langs.where("1", movie.originalLanguage)?.name || "Unknown"],
                                             ].map(([label, value]) => (
                                                 <div key={label} className="rounded-xl border border-white/6 bg-black/15 px-3 py-2.5">
@@ -146,7 +156,7 @@ const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout }: { movie: Mo
                                 <div className="mt-5 grid grid-cols-3 gap-3 border-t border-white/6 pt-4">
                                     {[
                                         ["Subtitles", subtitlesAvailable > 0 ? `${subtitlesAvailable} ${subtitlesAvailable === 1 ? "subtitle" : "subtitles"} available` : "No subtitles available"],
-                                        ["Audio language", audioTracksAvailable > 0 ? `${audioTracksAvailable} ${audioTracksAvailable === 1 ? "audio track" : "audio tracks"} available` : "No audio tracks available"],
+                                        ["Audio language", audioTracksAvailable > 0 ? `${audioTracksAvailable} ${audioTracksAvailable === 1 ? "audio track" : "audio tracks"} available` : "No audio tracks found"],
                                         ["Video quality", `${resolution.tag} (${resolution.width}x${resolution.height})` || "Unknown"],
                                     ].map(([label, value]) => (
                                         <div key={label} className="min-w-0">

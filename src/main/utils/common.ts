@@ -1,7 +1,8 @@
-import { app } from "electron";
+import { app, BrowserWindow } from "electron";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { PARTITION } from "../services/letterboxd-service";
 
 /**
  * Checks if the application is running in development mode.
@@ -43,4 +44,17 @@ export function pathToCacheURL(absolutePath: string): string {
   const cacheDir = path.join(app.getPath("userData"), "Cache");
   const relative = path.relative(cacheDir, absolutePath).split(path.sep);
   return `cache://local/${relative.map(encodeURIComponent).join("/")}`;
+}
+
+
+export function hiddenWindow(): BrowserWindow {
+  return new BrowserWindow({
+    show: false,
+    webPreferences: {
+      partition: PARTITION,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
 }

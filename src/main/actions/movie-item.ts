@@ -57,6 +57,8 @@ export async function playMovie(folder: string, videoFile: string, subtitle: str
     args.push(`--audio-language=${audioCode}`);
   }
 
+  args.push("--no-sub-autodetect-file");
+
   if (subtitle.includes('.')) {
     const subtitleFilePath = path.resolve(MOVIES_FOLDER, folder, subtitle);
     if (!subtitleFilePath.startsWith(root + path.sep)) {
@@ -87,28 +89,6 @@ export async function playMovie(folder: string, videoFile: string, subtitle: str
     };
   }
 }
-
-/**
- * Opens a subtitles file for a specific movie.
- * @param {string} folder - The name of the movie folder.
- * @param {string} subtitlesFile - The name of the subtitles file to open.
- * @returns {Promise<ResultResponse>} A promise that resolves to a ResultResponse indicating success or failure of the operation.
- */
-export async function openSubtitlesFile(folder: string, subtitlesFile: string): Promise<ResultResponse> {
-  const filePath = path.resolve(MOVIES_FOLDER, folder, subtitlesFile);
-  const root = path.resolve(MOVIES_FOLDER);
-
-  if (!filePath.startsWith(root + path.sep)) {
-    return { success: false, message: "Invalid file path" };
-  }
-
-  const error = await shell.openPath(filePath);
-
-  if (error) return { success: false, message: `Failed to open subtitles file: ${error}` };
-
-  return { success: true };
-}
-
 
 /**
  * Fetches detailed movie information from TMDB for a given movie ID and updates the movie record in the database.

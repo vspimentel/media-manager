@@ -6,6 +6,7 @@ import { getMovieMetadata, getSubtitleLanguage } from "../services/metadata-serv
 import { formatMovieFolder } from "../services/movies-service";
 import { ResultResponse } from "../types/common";
 import { MovieLocalSubtitle, MovieMetadata } from "../types/movies";
+import { shell } from "electron";
 
 const config = loadConfig();
 
@@ -73,8 +74,10 @@ export async function updateMovieFiles(movieId: number, folder: string): Promise
     const selectedSubtitleLanguage = selectPreferredLanguage(availableSubtitleLanguages || [], preferredSubtitleLanguages);
 
     updateMovie(movieId, {
+        filesize: metadata?.filesize || 0,
         videoFile: formattedFolder.videoFile,
         subtitleFiles: JSON.stringify(subtitleFiles),
+        torrentFile: formattedFolder.torrentFile,
         resolution: JSON.stringify(metadata?.resolution || { tag: "", width: 0, height: 0 }),
         videoCodec: metadata?.videoCodec || "",
         audioCodecs: JSON.stringify(metadata?.audioCodecs || []),
@@ -93,27 +96,66 @@ export async function addSubtitleFile(movieId: number, folder: string, sourcePat
 
     const movieFolderPath = path.resolve(MOVIES_FOLDER, folder);
     const moviesRoot = path.resolve(MOVIES_FOLDER);
+
     const sourceFilePath = path.resolve(sourcePath);
     const extension = path.extname(sourceFilePath).toLowerCase();
 
-    if (!movieFolderPath.startsWith(moviesRoot + path.sep)) {
-        return { success: false, message: "Invalid movie folder" };
-    }
+    if (!movieFolderPath.startsWith(moviesRoot + path.sep)) return { success: false, message: "Invalid movie folder" };
 
-    if (![".srt", ".vtt", ".ass", ".ssa", ".sub", ".idx", ".txt"].includes(extension)) {
-        return { success: false, message: "Unsupported subtitle file format" };
-    }
+    if (![".srt", ".vtt", ".ass", ".ssa", ".sub", ".idx", ".txt"].includes(extension)) return { success: false, message: "Unsupported subtitle file format" };
 
     const destinationPath = path.join(movieFolderPath, path.basename(sourceFilePath));
 
     try {
         await copyFile(sourceFilePath, destinationPath);
     } catch (error) {
-        return {
-            success: false,
-            message: `Failed to add subtitle file: ${error instanceof Error ? error.message : "Unknown error"}`,
-        };
+        return { success: false, message: `Failed to add subtitle file: ${error instanceof Error ? error.message : "Unknown error"}` };
     }
 
     return updateMovieFiles(movieId, folder);
+}
+
+export async function addTorrentFile(movieId: number, folder: string, sourcePath: string): Promise<ResultResponse> {
+    const movie = getMovieByField("id", movieId.toString());
+    if (!movie) return { success: false, message: "Movie not found" };
+
+    const movieFolderPath = path.resolve(MOVIES_FOLDER, folder);
+    const moviesRoot = path.resolve(MOVIES_FOLDER);
+
+    const sourceFilePath = path.resolve(sourcePath);
+    const extension = path.extname(sourceFilePath).toLowerCase();
+
+    if (!movieFolderPath.startsWith(moviesRoot + path.sep)) return { success: false, message: "Invalid movie folder" };
+
+    if (extension !== ".torrent") return { success: false, message: "Not a torrent file" };
+
+    const destinationPath = path.join(movieFolderPath, path.basename(sourceFilePath));
+
+    try {
+        await copyFile(sourceFilePath, destinationPath);
+    } catch (error) {
+        return { success: false, message: `Failed to add torrent file: ${error instanceof Error ? error.message : "Unknown error"}` };
+    }
+
+    return updateMovieFiles(movieId, folder);
+}
+
+/**
+ * Opens a local file for a specific movie.
+ * @param {string} folder - The name of the movie folder.
+ * @param {string} file - The name of the file to open.
+ * @returns {Promise<ResultResponse>} A promise that resolves to a ResultResponse indicating success or failure of the operation.
+ */
+export async function openLocalFile(folder: string, file: string): Promise<ResultResponse> {
+    const filePath = path.resolve(MOVIES_FOLDER, folder, file);
+    const root = path.resolve(MOVIES_FOLDER);
+
+    if (!filePath.startsWith(root + path.sep)) {
+        return { success: false, message: "Invalid file path" };
+    }
+
+    const error = await shell.openPath(filePath);
+
+    if (error) return { success: false, message: `Failed to open local file: ${error}` };
+    return { success: true };
 }

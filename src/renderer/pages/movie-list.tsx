@@ -4,12 +4,13 @@ import { Button } from "#components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "#components/ui/input-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "#components/ui/select";
 import { useEffect, useRef, useState } from "react";
-import { Film, Search, SlidersHorizontal, Sparkles, Tv, Gamepad2, Images, Settings, RefreshCw, ArrowDownWideNarrow, ArrowUpWideNarrow, LayoutGrid, Grid2X2, List, AlignJustify } from "lucide-react";
+import { Film, Search, SlidersHorizontal, Sparkles, Tv, Gamepad2, Images, Settings, RefreshCw, ArrowDownWideNarrow, ArrowUpWideNarrow, LayoutGrid, Grid2X2, List, AlignJustify, Clapperboard } from "lucide-react";
 import { showToast } from "../utils/common";
 import { Movie } from "../types/movies";
 import MovieSelectionModal from "../modals/movies/movie-selection";
 import MoviePosterSelectionModal from "../modals/movies/poster-selection";
-import { useGetMovies } from "#hooks/services/useGetMovies";
+import { useGetMovies } from "#hooks/services/movies/useGetMovies";
+import SettingsModal from "../modals/movies/settings-modal";
 
 const MOVIE_LIST_PREFERENCES_KEY = "movie-library-preferences";
 const MOVIE_LIST_SCROLL_KEY = "movie-library-scroll";
@@ -91,28 +92,51 @@ const MovieListPage = () => {
         }
     }, [isLoading]);
 
+    const [settingsOpen, setSettingsOpen] = useState(false);
+
     return (
-        <div className="mx-auto flex h-screen w-full max-w-[1800px] gap-6 p-5 text-white md:p-7">
+        <div className="mx-auto flex h-full w-full max-w-[1800px] gap-6 p-5 text-white md:p-7">
             <aside className="hidden w-60 shrink-0 flex-col rounded-2xl border border-white/8 bg-black/25 p-4 shadow-2xl backdrop-blur-xl lg:flex">
                 <div className="mb-9 flex items-center gap-3 px-2 pt-1">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-200/15 bg-cyan-300/10 text-cyan-100"><Film size={18} /></div>
-                    <div><div className="text-sm font-medium tracking-wide">FRAME</div><div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Movie library</div></div>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-200/15 bg-cyan-300/10 text-cyan-100">
+                        <Film size={18} />
+                    </div>
+                    <div>
+                        <div className="text-sm font-medium tracking-wide">FRAME</div>
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Media manager</div>
+                    </div>
                 </div>
                 <div className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.2em] text-white/35">Your library</div>
                 <div className="flex justify-between flex-col h-full">
                     <nav aria-label="Library sections" className="space-y-1">
-                        <Button type="button" aria-current="page" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl border border-white/10 bg-white/8 px-3 py-2.5 text-left text-sm text-white/90 hover:bg-white/10 hover:text-white"><Film size={16} className="text-cyan-100/80" /> Movies <span className="ml-auto text-xs text-white/40">{movies?.length ?? "—"}</span></Button>
-                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/5 hover:text-white/80"><Tv size={16} className="text-white/40" /> TV shows</Button>
-                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/5 hover:text-white/80"><Sparkles size={16} className="text-white/40" />Anime</Button>
-                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/5 hover:text-white/80"><Gamepad2 size={16} className="text-white/40" />Games</Button>
-                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/5 hover:text-white/80"><Images size={16} className="text-white/40" />Galleries</Button>
+                        <Button type="button" aria-current="page" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl border border-white/10 bg-white/8 px-3 py-2.5 text-left text-sm text-white/90 hover:bg-white/10 hover:text-white">
+                            <Clapperboard size={16} className="text-cyan-100/80" /> Movies <span className="ml-auto text-xs text-white/40">{movies?.length ?? "—"}</span>
+                        </Button>
+                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/5 hover:text-white/80">
+                            <Tv size={16} className="text-white/40" /> TV shows
+                        </Button>
+                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/5 hover:text-white/80">
+                            <Sparkles size={16} className="text-white/40" />Anime
+                        </Button>
+                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/5 hover:text-white/80">
+                            <Gamepad2 size={16} className="text-white/40" />Games
+                        </Button>
+                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/5 hover:text-white/80">
+                            <Images size={16} className="text-white/40" />Galleries
+                        </Button>
                     </nav>
-                    <Button type="button" variant="ghost" className="mt-3 h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/5 hover:text-white/85"><Settings size={16} className="text-white/45" />Settings</Button>
+                    <Button type="button" variant="ghost" onClick={() => setSettingsOpen(true)} className="mt-3 h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/5 hover:text-white/85">
+                        <Settings size={16} className="text-white/45" />Settings
+                    </Button>
                 </div>
             </aside>
             <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/8 bg-black/15 shadow-2xl backdrop-blur-md">
                 <header className="flex flex-wrap items-end justify-between gap-4 border-b border-white/8 px-5 py-5 md:px-7 md:py-6">
-                    <div><div className="mb-1 text-[10px] font-medium uppercase tracking-[0.22em] text-cyan-100/55">Your collection</div><h1 className="text-2xl font-light tracking-tight md:text-3xl">All movies</h1><p className="mt-1.5 text-xs text-white/40">A little something for every night.</p></div>
+                    <div>
+                        <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.22em] text-cyan-100/55">Your collection</div>
+                        <h1 className="text-2xl font-light tracking-tight md:text-3xl">All movies</h1>
+                        <p className="mt-1.5 text-xs text-white/40">Detailed information about your movie library</p>
+                    </div>
                     <div className="flex items-center gap-2">
                         <InputGroup className="hidden h-10 w-64 rounded-xl border-white/10 bg-white/4 shadow-none focus-within:border-white/20 focus-within:ring-0 sm:flex">
                             <InputGroupAddon align="inline-start" className="pl-3 text-white/40">
@@ -235,6 +259,9 @@ const MovieListPage = () => {
                         onClose={() => setMovieForPosterChange(null)}
                     />
                 )}
+            </Dialog>
+            <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+                {settingsOpen && <SettingsModal />}
             </Dialog>
         </div>
     )

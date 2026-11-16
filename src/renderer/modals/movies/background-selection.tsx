@@ -4,8 +4,8 @@ import { Check, Image, PanelsTopLeft } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Movie } from "../../types/movies";
 import { MovieImage } from "../../../main/types/movies";
-import { useGetMovieImages } from "#hooks/services/useGetMoviePosters";
-import { useChangeImage } from "#hooks/actions/useChangePoster";
+import { useGetMovieImages } from "#hooks/services/movies/useGetMoviePosters";
+import { useChangeImage } from "#hooks/actions/movies/useChangePoster";
 import { showToast } from "../../utils/common";
 
 
@@ -25,7 +25,7 @@ const MovieBackgroundSelectionModal = ({ movie, onClose }: { movie: Movie; onClo
 
     const changePoster = useChangeImage();
 
-    const handleChangePoster = async () => {
+    const handleBackgroundPoster = async () => {
         if (!selectedBackground) return
         try {
             const result = await changePoster.mutateAsync({ movieId: movie.id, imagePath: selectedBackground.file, type: "backdrop" });
@@ -123,7 +123,7 @@ const MovieBackgroundSelectionModal = ({ movie, onClose }: { movie: Movie; onClo
                 </div>
                 <Button
                     type="button" variant="ghost"
-                    size="xs" onClick={handleChangePoster}
+                    size="xs" onClick={handleBackgroundPoster}
                     className="rounded-lg border border-white/10 text-white/55 hover:border-white/20 hover:bg-white/10 hover:text-white/80"
                 >
                     Select background

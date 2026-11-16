@@ -2,8 +2,8 @@ import PosterFallback from "#components/fallbacks/poster-fallback";
 import { DialogContent } from "#components/ui/dialog"
 import { Button } from "#components/ui/button"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "#components/ui/input-group"
-import { useChangeMovie } from "#hooks/actions/useChangeMovie";
-import { useSearchMovies } from "#hooks/services/useSearchMovies";
+import { useChangeMovie } from "#hooks/actions/movies/useChangeMovie";
+import { useSearchMovies } from "#hooks/services/movies/useSearchMovies";
 import { showToast } from "../../utils/common";
 import { CalendarDays, Clapperboard, Globe, Search } from "lucide-react"
 import { Movie } from "../../types/movies";

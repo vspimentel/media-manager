@@ -3,6 +3,7 @@ export type MovieFolder = {
   name: string;
   videoFile: string;
   subtitlesFiles: string[];
+  torrentFile: string | null;
 };
 
 export type MovieImage = {

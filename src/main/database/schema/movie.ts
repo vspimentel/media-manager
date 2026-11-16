@@ -5,6 +5,7 @@ export const Movie = sqliteTable("movies", {
   folder: text("folder").notNull().unique(),
   videoFile: text("video_file").notNull(),
   subtitleFiles: text("subtitle_files"),
+  torrentFile: text("torrent_file"),
   filesize: integer("filesize"),
   resolution: text("resolution"),
   videoCodec: text("video_codec"),
