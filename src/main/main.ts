@@ -9,7 +9,7 @@ import { initializeDatabase } from "./database";
 import { isDev } from './utils/common';
 import { getMovieImages, searchMovies } from './services/tmbd-service';
 import { addSubtitleFile, addTorrentFile, openLocalFile, updateMovieFiles } from './actions/movie-details';
-import { isLoggedInToLetterboxd, loginToLetterboxd, logoutFromLetterboxd } from './services/letterboxd-service';
+import { importRatingsFromLetterboxd, isLoggedInToLetterboxd, loginToLetterboxd, logoutFromLetterboxd, makeReviewOnLetterboxd } from './services/letterboxd-service';
 
 async function createWindow() {
   const win = new BrowserWindow({
@@ -115,6 +115,14 @@ async function createWindow() {
 
   ipcMainHandle("logoutFromLetterboxd", async () => {
     return await logoutFromLetterboxd();
+  });
+
+  ipcMainHandle("importRatingsFromLetterboxd", async () => {
+    return await importRatingsFromLetterboxd(win);
+  });
+
+  ipcMainHandle("makeReviewOnLetterboxd", async (args) => {
+    return await makeReviewOnLetterboxd(win, args.movieId);
   });
 }
 

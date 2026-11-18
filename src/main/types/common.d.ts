@@ -12,3 +12,6 @@ export type ResultResponse = {
   success: boolean;
   message?: string;
 }
+
+
+

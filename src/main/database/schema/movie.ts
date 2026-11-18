@@ -15,6 +15,8 @@ export const Movie = sqliteTable("movies", {
   selectedAudioLanguage: text("selected_audio_language"),
   selectedSubtitleLanguage: text("selected_subtitle_language"),
   cacheKey: text("cache_key"),
+  ohash: text("ohash"),
+  rating: real("rating"),
   tmbdId: integer("tmdb_id"),
   title: text("title"),
   originalTitle: text("original_title"),

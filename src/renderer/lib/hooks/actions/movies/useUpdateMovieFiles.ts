@@ -11,9 +11,9 @@ export function useUpdateMovieFiles() {
 
             return result;
         },
-        onSuccess: () => {
+        onSuccess: (_result, { movieId }) => {
             client.invalidateQueries({ queryKey: ["movies"] })
-            client.invalidateQueries({ queryKey: ["movie"] })
+            client.invalidateQueries({ queryKey: ["movie", movieId] })
         }
     });
 }

@@ -1,12 +1,12 @@
 import { DialogContent } from "#components/ui/dialog";
 import { Button } from "#components/ui/button";
 import { Check, Image, PanelsTopLeft } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { Movie } from "../../types/movies";
-import { MovieImage } from "../../../main/types/movies";
+import { useEffect, useState } from "react";
 import { useGetMovieImages } from "#hooks/services/movies/useGetMoviePosters";
+import { MovieImage } from "../../../../main/types/movies";
 import { useChangeImage } from "#hooks/actions/movies/useChangePoster";
-import { showToast } from "../../utils/common";
+import { showToast } from "#utils/common";
+import { Movie } from "#types/movies";
 
 
 const MovieBackgroundSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: () => void }) => {
@@ -81,7 +81,7 @@ const MovieBackgroundSelectionModal = ({ movie, onClose }: { movie: Movie; onClo
                                     {backgrounds.map((background, index) => {
                                         const selected = selectedBackground?.file === background.file;
                                         return (
-                                            <button key={background.file} type="button" aria-label={`Background image ${index + 1}${selected ? ", selected" : ""}`} aria-pressed={selected} onClick={() => setSelectedBackground(background)} className={`group relative overflow-hidden rounded-xl border p-1 text-left transition ${selected ? "border-cyan-200/60 bg-cyan-200/10 ring-2 ring-cyan-200/15" : "border-white/8 bg-white/3 hover:border-white/20 hover:bg-white/6"}`}>
+                                            <button key={background.file} type="button" aria-label={`Background image ${index + 1}${selected ? ", selected" : ""}`} aria-pressed={selected} onClick={() => setSelectedBackground(background)} className={`group relative overflow-hidden rounded-xl border p-1 text-left transition hover:brightness-110 ${selected ? "border-cyan-200/60 bg-cyan-200/10 ring-2 ring-cyan-200/15" : "border-white/8 bg-white/3 hover:border-white/20 hover:bg-white/10"}`}>
                                                 <div className="relative aspect-video overflow-hidden rounded-lg bg-black/30">
                                                     <img src={`https://image.tmdb.org/t/p/original${background.file}`}
                                                         className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
@@ -124,7 +124,7 @@ const MovieBackgroundSelectionModal = ({ movie, onClose }: { movie: Movie; onClo
                 <Button
                     type="button" variant="ghost"
                     size="xs" onClick={handleBackgroundPoster}
-                    className="rounded-lg border border-white/10 text-white/55 hover:border-white/20 hover:bg-white/10 hover:text-white/80"
+                    className="rounded-lg border border-white/10 text-white/55 hover:border-white/20 hover:bg-white/10 hover:text-white"
                 >
                     Select background
                 </Button>

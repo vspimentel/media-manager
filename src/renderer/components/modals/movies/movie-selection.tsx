@@ -2,13 +2,15 @@ import PosterFallback from "#components/fallbacks/poster-fallback";
 import { DialogContent } from "#components/ui/dialog"
 import { Button } from "#components/ui/button"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "#components/ui/input-group"
-import { useChangeMovie } from "#hooks/actions/movies/useChangeMovie";
-import { useSearchMovies } from "#hooks/services/movies/useSearchMovies";
-import { showToast } from "../../utils/common";
 import { CalendarDays, Clapperboard, Globe, Search } from "lucide-react"
-import { Movie } from "../../types/movies";
 import { useState } from "react";
 import useDebounce from "#hooks/common/useDebounce";
+import langs from "langs";
+import { useSearchMovies } from "#hooks/services/movies/useSearchMovies";
+import { useChangeMovie } from "#hooks/actions/movies/useChangeMovie";
+import { showToast } from "#utils/common";
+import { Movie } from "#types/movies";
+
 
 const MovieSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: () => void }) => {
 
@@ -105,7 +107,7 @@ const MovieSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: () => 
                                 {getReleaseYear(movie.release_date)}
                                 <span className="px-0.5">·</span>
                                 <Globe size={13} />
-                                {movie.original_language.toUpperCase()}
+                                {movie.original_language ? langs.where("1", movie.original_language)?.name || "Unknown" : "Unknown"}
                             </div>
                             <div className="mt-2 line-clamp-2 overflow-hidden text-xs text-white/35">{movie.overview}</div>
                         </div>
@@ -113,7 +115,7 @@ const MovieSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: () => 
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 hover:border-white/20 hover:bg-white/10 hover:text-white/80"
+                            className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 hover:border-white/20 hover:bg-white/10 hover:text-white"
                             onClick={() => handleSelectMovie(movie.id)}
                         >
                             Select

@@ -3,36 +3,17 @@ import { Dialog } from "#components/ui/dialog";
 import { Button } from "#components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "#components/ui/input-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "#components/ui/select";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Film, Search, SlidersHorizontal, Sparkles, Tv, Gamepad2, Images, Settings, RefreshCw, ArrowDownWideNarrow, ArrowUpWideNarrow, LayoutGrid, Grid2X2, List, AlignJustify, Clapperboard } from "lucide-react";
-import { showToast } from "../utils/common";
-import { Movie } from "../types/movies";
-import MovieSelectionModal from "../modals/movies/movie-selection";
-import MoviePosterSelectionModal from "../modals/movies/poster-selection";
+import MovieSelectionModal from "#components/modals/movies/movie-selection";
+import MoviePosterSelectionModal from "#components/modals/movies/poster-selection";
 import { useGetMovies } from "#hooks/services/movies/useGetMovies";
-import SettingsModal from "../modals/movies/settings-modal";
-
-const MOVIE_LIST_PREFERENCES_KEY = "movie-library-preferences";
-const MOVIE_LIST_SCROLL_KEY = "movie-library-scroll";
-const validLayouts = ["poster", "compact", "list", "details"];
-const validSortFields = ["folder", "title", "releaseDate", "voteAverage"];
-
-function readMovieListPreferences() {
-    try {
-        const saved = JSON.parse(localStorage.getItem(MOVIE_LIST_PREFERENCES_KEY) ?? "null");
-        return {
-            layout: validLayouts.includes(saved?.layout) ? saved.layout : "poster",
-            sortBy: validSortFields.includes(saved?.sortBy) ? saved.sortBy : "folder",
-            sortDirection: saved?.sortDirection === "desc" ? "desc" : "asc",
-        };
-    } catch {
-        return { layout: "poster", sortBy: "folder", sortDirection: "asc" };
-    }
-}
+import { showToast } from "#utils/common";
+import { Movie } from "#types/movies";
+import { usePageContext } from "#hooks/common/usePageContext";
 
 const MovieListPage = () => {
-    const [preferences] = useState(readMovieListPreferences);
-    const [layout, setLayout] = useState<string>(preferences.layout);
+    const MOVIE_LIST_PREFERENCES_KEY = "movie-library-preferences";
 
     const layoutOptions: SelectItem[] = [
         { value: "poster", label: { text: "Poster grid", "icon": <LayoutGrid size={13} className="text-cyan-100/55" /> } },
@@ -41,16 +22,7 @@ const MovieListPage = () => {
         { value: "details", label: { text: "Details", "icon": <AlignJustify size={13} className="text-cyan-100/55" /> } }
     ]
 
-    const handleLayoutChange = (value: string) => {
-        setLayout(value);
-    }
-
-    const [sortBy, setSortBy] = useState<string>(preferences.sortBy);
-    const [sortDirection, setSortDirection] = useState<string>(preferences.sortDirection);
-
-    useEffect(() => {
-        localStorage.setItem(MOVIE_LIST_PREFERENCES_KEY, JSON.stringify({ layout, sortBy, sortDirection }));
-    }, [layout, sortBy, sortDirection]);
+    const validLayouts = ["poster", "compact", "list", "details"];
 
     const sortOptions: SelectItem[] = [
         { value: "folder", label: "Folder name" },
@@ -58,6 +30,30 @@ const MovieListPage = () => {
         { value: "releaseDate", label: "Release date" },
         { value: "voteAverage", label: "Rating" }
     ]
+
+    const validSortFields = ["folder", "title", "releaseDate", "voteAverage"];
+
+    const readMovieListPreferences = useCallback(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(MOVIE_LIST_PREFERENCES_KEY) ?? "null");
+            return {
+                layout: validLayouts.includes(saved?.layout) ? saved.layout : "poster",
+                sortBy: validSortFields.includes(saved?.sortBy) ? saved.sortBy : "folder",
+                sortDirection: saved?.sortDirection === "desc" ? "desc" : "asc",
+            };
+        } catch {
+            return { layout: "poster", sortBy: "folder", sortDirection: "asc" };
+        }
+    }, [MOVIE_LIST_PREFERENCES_KEY, validLayouts, validSortFields]);
+
+    const [preferences] = useState(readMovieListPreferences);
+    const [layout, setLayout] = useState<string>(preferences.layout);
+    const [sortBy, setSortBy] = useState<string>(preferences.sortBy);
+    const [sortDirection, setSortDirection] = useState<string>(preferences.sortDirection);
+
+    const handleLayoutChange = (value: string) => {
+        setLayout(value);
+    }
 
     const handleSortChange = (value: string) => {
         setSortBy(value);
@@ -67,11 +63,23 @@ const MovieListPage = () => {
         setSortDirection((value) => value === "asc" ? "desc" : "asc");
     }
 
+    useEffect(() => {
+        localStorage.setItem(MOVIE_LIST_PREFERENCES_KEY, JSON.stringify({ layout, sortBy, sortDirection }));
+    }, [layout, sortBy, sortDirection]);
+
     const { data: movies, update, isLoading, isRefetching, error } = useGetMovies(sortBy, sortDirection);
 
-    const [movieForChange, setMovieForChange] = useState<Movie | null>(null);
+    const MOVIE_LIST_SCROLL_KEY = "movie-library-scroll";
 
-    const [movieForPosterChange, setMovieForPosterChange] = useState<Movie | null>(null);
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!isLoading && scrollRef.current) {
+            scrollRef.current.scrollTop = Number(
+                localStorage.getItem(MOVIE_LIST_SCROLL_KEY) ?? 0
+            );
+        }
+    }, [isLoading, scrollRef.current]);
 
     const handleUpdateList = () => {
         update();
@@ -82,17 +90,14 @@ const MovieListPage = () => {
         });
     }
 
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const [movieForChange, setMovieForChange] = useState<Movie | null>(null);
+    const [movieForPosterChange, setMovieForPosterChange] = useState<Movie | null>(null);
 
-    useEffect(() => {
-        if (!isLoading && scrollRef.current) {
-            scrollRef.current.scrollTop = Number(
-                localStorage.getItem(MOVIE_LIST_SCROLL_KEY) ?? 0
-            );
-        }
-    }, [isLoading]);
+    const { setShowMovieSettingsModal } = usePageContext();
 
-    const [settingsOpen, setSettingsOpen] = useState(false);
+    const handleOpenSettings = () => {
+        setShowMovieSettingsModal(true);
+    }
 
     return (
         <div className="mx-auto flex h-full w-full max-w-[1800px] gap-6 p-5 text-white md:p-7">
@@ -112,20 +117,20 @@ const MovieListPage = () => {
                         <Button type="button" aria-current="page" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl border border-white/10 bg-white/8 px-3 py-2.5 text-left text-sm text-white/90 hover:bg-white/10 hover:text-white">
                             <Clapperboard size={16} className="text-cyan-100/80" /> Movies <span className="ml-auto text-xs text-white/40">{movies?.length ?? "—"}</span>
                         </Button>
-                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/5 hover:text-white/80">
+                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/10 hover:text-white">
                             <Tv size={16} className="text-white/40" /> TV shows
                         </Button>
-                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/5 hover:text-white/80">
+                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/10 hover:text-white">
                             <Sparkles size={16} className="text-white/40" />Anime
                         </Button>
-                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/5 hover:text-white/80">
+                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/10 hover:text-white">
                             <Gamepad2 size={16} className="text-white/40" />Games
                         </Button>
-                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/5 hover:text-white/80">
+                        <Button type="button" variant="ghost" className="h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/10 hover:text-white">
                             <Images size={16} className="text-white/40" />Galleries
                         </Button>
                     </nav>
-                    <Button type="button" variant="ghost" onClick={() => setSettingsOpen(true)} className="mt-3 h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/5 hover:text-white/85">
+                    <Button type="button" variant="ghost" onClick={handleOpenSettings} className="mt-3 h-auto w-full justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/55 hover:bg-white/10 hover:text-white">
                         <Settings size={16} className="text-white/45" />Settings
                     </Button>
                 </div>
@@ -144,13 +149,13 @@ const MovieListPage = () => {
                             </InputGroupAddon>
                             <InputGroupInput aria-label="Search your library" placeholder="Search your library" className="h-full min-w-0 px-0 text-sm text-white placeholder:text-white/35" />
                         </InputGroup>
-                        <Button type="button" variant="ghost" size="icon" aria-label="Filter movies" className="h-10 w-10 rounded-xl border border-white/10 bg-white/4 text-white/50 hover:bg-white/8 hover:text-white">
+                        <Button type="button" variant="ghost" size="icon" aria-label="Filter movies" className="h-10 w-10 rounded-xl border border-white/10 bg-white/4 text-white/50 hover:bg-white/10 hover:text-white">
                             <SlidersHorizontal size={16} />
                         </Button>
                         <Button
                             type="button" variant="ghost" size="icon"
                             aria-label="Update movie library"
-                            className="h-10 w-10 rounded-xl border border-white/10 bg-white/4 text-white/50 hover:bg-white/8 hover:text-white"
+                            className="h-10 w-10 rounded-xl border border-white/10 bg-white/4 text-white/50 hover:bg-white/10 hover:text-white"
                             onClick={handleUpdateList}
                             disabled={isRefetching}
                         >
@@ -205,7 +210,7 @@ const MovieListPage = () => {
                                 variant="ghost"
                                 size="icon-sm"
                                 onClick={() => handleSortDirectionChange()}
-                                className="border-white/8 bg-white/4 px-3 text-xs text-white/75 shadow-none hover:border-white/15 hover:bg-white/8 dark:bg-white/4 hover:text-white"
+                                className="border-white/8 bg-white/4 px-3 text-xs text-white/75 shadow-none hover:border-white/15 hover:bg-white/10 dark:bg-white/4 hover:text-white"
                             >
                                 {sortDirection === "desc"
                                     ? <ArrowDownWideNarrow size={14} />
@@ -259,9 +264,6 @@ const MovieListPage = () => {
                         onClose={() => setMovieForPosterChange(null)}
                     />
                 )}
-            </Dialog>
-            <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-                {settingsOpen && <SettingsModal />}
             </Dialog>
         </div>
     )

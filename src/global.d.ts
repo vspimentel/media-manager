@@ -1,5 +1,3 @@
-import { TMBDResult } from "./main/types/movies";
-import { ResultResponse } from "./main/types/common";
 
 declare module "*.css";
 
@@ -37,6 +35,9 @@ declare global {
     isLoggedInToLetterboxd: void;
     loginToLetterboxd: void;
     logoutFromLetterboxd: void;
+    importRatingsFromLetterboxd: void;
+    makeReviewOnLetterboxd: { movieId: number };
+    letterboxdReviewSubmitted: void;
   };
 
   type EventPayloadMapping = {
@@ -68,6 +69,9 @@ declare global {
     isLoggedInToLetterboxd: string | null;
     loginToLetterboxd: string | null;
     logoutFromLetterboxd: void;
+    importRatingsFromLetterboxd: number | null;
+    makeReviewOnLetterboxd: ResultResponse;
+    letterboxdReviewSubmitted: LetterboxdReview;
   };
 
   interface Window {
@@ -100,6 +104,8 @@ declare global {
       isLoggedInToLetterboxd: () => Promise<string | null>;
       loginToLetterboxd: () => Promise<string | null>;
       logoutFromLetterboxd: () => Promise<void>;
+      importRatingsFromLetterboxd: () => Promise<number | null>;
+      makeReviewOnLetterboxd: (movieId: number) => Promise<ResultResponse>;
     };
   }
 }

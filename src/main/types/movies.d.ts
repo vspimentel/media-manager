@@ -16,6 +16,7 @@ export type MovieImage = {
 
 export type MovieMetadata = {
   filesize: number;
+  ohash: string;
   resolution: {
     tag: string;
     width: number;

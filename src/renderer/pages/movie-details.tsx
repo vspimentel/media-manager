@@ -1,22 +1,26 @@
 import PosterFallback from "#components/fallbacks/poster-fallback";
 import { Button } from "#components/ui/button";
-import { ArrowLeft, CalendarDays, Clapperboard, Clock3, ExternalLink, FilePlus2, Film, Folder, FolderOpen, Globe2, Languages, Play, RefreshCcw, Search, Star, Subtitles } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clapperboard, Clock3, ExternalLink, FilePlus2, Film, Folder, FolderOpen, Globe2, Languages, Loader, LoaderCircle, Play, RefreshCcw, Search, Star, Subtitles } from "lucide-react";
 import { Link, useParams } from "react-router";
-import { useGetMovie } from "#hooks/services/movies/useGetMovie";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Genre, Movie } from "../types/movies";
-import { formatDate, getCountryName, showToast } from "../utils/common";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "#components/ui/context-menu";
 import { Dialog } from "#components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "#components/ui/select";
 import prettyBytes from "pretty-bytes";
 import langs from "langs";
-import MoviePosterSelectionModal from "../modals/movies/poster-selection";
-import MovieBackgroundSelectionModal from "../modals/movies/background-selection";
-import { useUpdateMovieFiles } from "#hooks/actions/movies/useUpdateMovieFiles";
 import { MovieLocalSubtitle } from "../../main/types/movies";
+import { useGetMovie } from "#hooks/services/movies/useGetMovie";
+import { formatDate, getCountryName, showToast } from "#utils/common";
+import { useUpdateMovieFiles } from "#hooks/actions/movies/useUpdateMovieFiles";
 import { useAddSubtitleFile } from "#hooks/actions/movies/useAddSubtitleFile";
 import { useAddTorrentFile } from "#hooks/actions/movies/useAddTorrentFile";
+import MoviePosterSelectionModal from "#components/modals/movies/poster-selection";
+import MovieBackgroundSelectionModal from "#components/modals/movies/background-selection";
+import { Genre, Movie } from "#types/movies";
+import { useLetterboxdReview } from "#hooks/services/movies/useLetterboxdReview";
+import { useLetterboxdSession } from "#hooks/services/movies/useLetterboxdSession";
+import SubtitlesSearchModal from "#components/modals/movies/subtitles-search";
+
 
 const MovieDetailsPage = () => {
     const { movieId } = useParams();
@@ -82,6 +86,27 @@ const MovieDetailsPage = () => {
         });
     }
 
+    const { mutateAsync: makeReviewOnLetterboxd, isPending: isMakingReviewOnLetterboxd } = useLetterboxdReview();
+    const { username } = useLetterboxdSession();
+
+    const handleMakeReviewOnLetterboxd = async () => {
+        if (!movie || !username) return;
+        try {
+            const result = await makeReviewOnLetterboxd({ movieId: movie.id });
+            showToast({
+                title: "Review posted",
+                message: result.message,
+                type: result.success ? "success" : "error",
+            });
+        } catch (error) {
+            showToast({
+                title: "Action failed",
+                message: error instanceof Error ? error.message : "An unexpected error occurred",
+                type: "error",
+            });
+        }
+    };
+
     const [openPosterMenu, setOpenPosterMenu] = useState(false);
     const [openBackdropMenu, setOpenBackdropMenu] = useState(false);
 
@@ -133,9 +158,9 @@ const MovieDetailsPage = () => {
         try {
             const result = await updateFiles.mutateAsync({ movieId: movie.id, folder: movie.folder });
             showToast({
-                title: "Action successful",
+                title: "Files updated",
                 message: result.message,
-                type: "success",
+                type: result.success ? "success" : "error",
             });
         } catch (error) {
             showToast({
@@ -165,9 +190,9 @@ const MovieDetailsPage = () => {
         try {
             const result = await addSubtitleFile.mutateAsync({ movieId: movie.id, folder: movie.folder, subtitleFile: file });
             showToast({
-                title: "Action successful",
+                title: "Subtitle file added",
                 message: result.message,
-                type: "success",
+                type: result.success ? "success" : "error",
             });
 
         } catch (error) {
@@ -179,6 +204,13 @@ const MovieDetailsPage = () => {
         }
     };
 
+    const [openSubtitleSearch, setOpenSubtitleSearch] = useState(false);
+
+    const handleOpenSubtitleSearch = () => {
+        console.log("Opening subtitle search modal");
+        setOpenSubtitleSearch(true);
+    };
+
     const torrentInputRef = useRef<HTMLInputElement>(null);
 
     const addTorrentFile = useAddTorrentFile();
@@ -188,9 +220,9 @@ const MovieDetailsPage = () => {
         try {
             const result = await addTorrentFile.mutateAsync({ movieId: movie.id, folder: movie.folder, torrentFile: file });
             showToast({
-                title: "Action successful",
+                title: "Torrent file added",
                 message: result.message,
-                type: "success",
+                type: result.success ? "success" : "error",
             });
 
         } catch (error) {
@@ -215,7 +247,6 @@ const MovieDetailsPage = () => {
             </div>
         );
     }
-
 
     return (
         <div className="soft-scrollbar mx-auto flex h-full w-full max-w-[1800px] flex-col overflow-y-auto p-4 text-white md:p-7">
@@ -287,15 +318,37 @@ const MovieDetailsPage = () => {
                                 </div>
                                 <p className="mt-6 max-w-3xl text-sm leading-7 text-white/65 md:text-base">{movie.overview}</p>
                                 <div className="mt-7 flex flex-wrap gap-3">
-                                    <Button onClick={handlePlayMovie} type="button" className="h-11 gap-2 rounded-xl bg-cyan-100 px-5 text-zinc-950 hover:bg-cyan-50">
+                                    <Button onClick={handlePlayMovie} type="button" className="h-11 gap-2 rounded-xl bg-cyan-100 px-5 text-zinc-950 hover:bg-cyan-50 hover:text-zinc-950">
                                         <Play size={16} fill="currentColor" />Play movie
                                     </Button>
                                     <Button onClick={handleOpenFolder} type="button" variant="ghost" className="h-11 gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-white/75 hover:bg-white/10 hover:text-white">
                                         <FolderOpen size={16} />Open folder
                                     </Button>
-                                    <Button type="button" variant="ghost" className="h-11 gap-2 rounded-xl border border-emerald-200/15 bg-emerald-300/5 px-4 text-emerald-100/75 hover:bg-emerald-300/10 hover:text-emerald-50"><Star size={14} />
-                                        Review on Letterboxd <ExternalLink size={13} />
-                                    </Button>
+                                    <div className="flex h-11 items-center overflow-hidden rounded-xl border border-emerald-200/15 bg-emerald-300/5">
+                                        {movie?.rating ? (
+                                            <div className="flex h-full items-center gap-2 border-r border-emerald-200/10 px-3">
+                                                <Star size={14} fill="currentColor" className="text-amber-100/80" />
+                                                <span className="text-sm font-medium tabular-nums text-white/80">{movie.rating}</span>
+                                                <span className="text-[9px] uppercase tracking-[0.12em] text-white/35">Your rating</span>
+                                            </div>
+                                        ) : (
+                                            <div aria-label="Your rating: not rated" className="flex h-full items-center gap-2 border-r border-emerald-200/10 px-3">
+                                                <Star size={14} className="text-white/35" />
+                                                <span className="text-xs font-medium text-white/45">Not rated</span>
+                                            </div>
+                                        )}
+                                        <Button
+                                            onClick={handleMakeReviewOnLetterboxd}
+                                            type="button" variant="ghost"
+                                            className="h-full gap-2 w-44 flex justify-center rounded-none px-3 text-xs text-emerald-100/75 hover:bg-emerald-300/10 hover:text-emerald-50"
+                                        >
+                                            {isMakingReviewOnLetterboxd
+                                                ? <>Making review... <LoaderCircle size={13} className="animate-spin" /></>
+                                                : <>Review on Letterboxd <ExternalLink size={13} /></>
+                                            }
+
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -395,7 +448,7 @@ const MovieDetailsPage = () => {
                                 items={audioLanguagesItems}
                             >
                                 <SelectTrigger
-                                    aria-label="Audio language" size="sm"
+                                    size="sm"
                                     className="h-8 min-w-40 rounded-md border-white/8 bg-white/5 px-2 text-xs text-white/75 shadow-none dark:bg-white/5"
                                 >
                                     <SelectValue placeholder="Unknown" />
@@ -430,7 +483,7 @@ const MovieDetailsPage = () => {
                                 items={subtitleLanguagesItems}
                             >
                                 <SelectTrigger
-                                    aria-label="Subtitle language" size="sm"
+                                    size="sm"
                                     className="h-8 min-w-40 rounded-md border-white/8 bg-white/5 px-2 text-xs text-white/75 shadow-none dark:bg-white/5"
                                 >
                                     <SelectValue />
@@ -509,7 +562,11 @@ const MovieDetailsPage = () => {
                                     <FilePlus2 size={13} />
                                     Add file
                                 </Button>
-                                <Button type="button" variant="ghost" size="sm" className="h-8 justify-start gap-1.5 rounded-lg border border-cyan-200/10 bg-cyan-200/5 px-2 text-[11px] text-cyan-100/70">
+                                <Button
+                                    onClick={handleOpenSubtitleSearch}
+                                    type="button" variant="ghost" size="sm"
+                                    className="h-8 justify-start gap-1.5 rounded-lg border border-cyan-200/10 bg-cyan-200/5 px-2 text-[11px] text-cyan-100/70"
+                                >
                                     <Search size={13} />
                                     Find online
                                 </Button>
@@ -634,6 +691,11 @@ const MovieDetailsPage = () => {
             </Dialog>
             <Dialog open={openBackgroundSelection} onOpenChange={setOpenBackgroundSelection}>
                 <MovieBackgroundSelectionModal movie={movie} onClose={() => setOpenBackgroundSelection(false)} />
+            </Dialog>
+            <Dialog open={openSubtitleSearch} onOpenChange={setOpenSubtitleSearch}>
+                <SubtitlesSearchModal
+                    movie={movie}
+                />
             </Dialog>
         </div>
     );

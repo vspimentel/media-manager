@@ -1,14 +1,15 @@
 import { DialogContent } from "#components/ui/dialog"
 import PosterFallback from "#components/fallbacks/poster-fallback";
 import { Check, Clapperboard, Image, Languages } from "lucide-react"
-import { Movie } from "../../types/movies";
-import { MovieImage } from "../../../main/types/movies";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "#components/ui/button";
-import { showToast } from "../../utils/common";
 import langs from "langs";
 import { useGetMovieImages } from "#hooks/services/movies/useGetMoviePosters";
+import { MovieImage } from "../../../../main/types/movies";
 import { useChangeImage } from "#hooks/actions/movies/useChangePoster";
+import { showToast } from "#utils/common";
+import { Movie } from "#types/movies";
+
 
 const MoviePosterSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: () => void }) => {
 
@@ -181,7 +182,7 @@ const MoviePosterSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: 
                     variant="ghost"
                     size="xs"
                     onClick={handleChangePoster}
-                    className="rounded-lg border border-white/10 text-white/50 hover:border-white/20 hover:bg-white/10 hover:text-white/80"
+                    className="rounded-lg border border-white/10 text-white/50 hover:border-white/20 hover:bg-white/10 hover:text-white"
                 >
                     Select Poster
                 </Button>

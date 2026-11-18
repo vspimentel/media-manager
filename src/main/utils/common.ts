@@ -33,8 +33,6 @@ export function hash(value: string): string {
     .update(value)
     .digest("hex");
 }
-
-
 /**
  * Converts an absolute file path to a cache URL that can be used in the application.
  * @param {string} absolutePath The absolute file path to convert.
@@ -46,7 +44,6 @@ export function pathToCacheURL(absolutePath: string): string {
   return `cache://local/${relative.map(encodeURIComponent).join("/")}`;
 }
 
-
 export function hiddenWindow(): BrowserWindow {
   return new BrowserWindow({
     show: false,
@@ -57,4 +54,12 @@ export function hiddenWindow(): BrowserWindow {
       sandbox: true
     }
   });
+}
+
+export function normalizeTitle(s: string): string {
+  return s.normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
 }

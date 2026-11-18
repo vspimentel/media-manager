@@ -12,6 +12,7 @@ export type Movie = {
   subtitleLanguages: string | null;
   selectedAudioLanguage: string;
   selectedSubtitleLanguage: string;
+  rating: number | null;
   cacheKey: string | null;
   tmbdId: number;
   title: string;

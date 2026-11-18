@@ -25,8 +25,8 @@ export function getMovieByField(field: string, value: string): Movie | undefined
  * @param {string} sortDirection - The direction to sort the movies in.
  * @returns {Movie[]} An array of all movies in the database.
  */
-export function getAllMovies(sortBy?: string, sortDirection?: string): Movie[] {
-  const column = sortBy ? (Movie as unknown as Record<string, AnyColumn>)[sortBy] : undefined;
+export function getAllMovies(sortBy = "folder", sortDirection = "asc"): Movie[] {
+  const column = (Movie as unknown as Record<string, AnyColumn>)[sortBy];
   if (!column) throw new Error(`Invalid sorting field: ${sortBy}`);
   const movies = sortDirection && sortDirection === "asc"
     ? db().select().from(Movie).orderBy(asc(column)).all()

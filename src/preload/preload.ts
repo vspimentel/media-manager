@@ -29,6 +29,8 @@ contextBridge.exposeInMainWorld("electron", {
   isLoggedInToLetterboxd: () => ipcInvoke("isLoggedInToLetterboxd"),
   loginToLetterboxd: () => ipcInvoke("loginToLetterboxd"),
   logoutFromLetterboxd: () => ipcInvoke("logoutFromLetterboxd"),
+  importRatingsFromLetterboxd: () => ipcInvoke("importRatingsFromLetterboxd"),
+  makeReviewOnLetterboxd: (movieId: number) => ipcInvoke("makeReviewOnLetterboxd", { movieId }),
 } satisfies Window["electron"]);
 
 function ipcInvoke<Key extends keyof EventPayloadMapping>(

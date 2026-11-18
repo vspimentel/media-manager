@@ -242,6 +242,7 @@ async function getMovieData(folder: MovieFolder): Promise<Movie> {
     filesize: metadata?.filesize || 0,
     selectedAudioLanguage,
     selectedSubtitleLanguage,
+    ohash: metadata?.ohash || "",
     cacheKey,
     tmbdId: movieInfo.id,
     title: movieInfo.title,

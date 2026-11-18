@@ -41,11 +41,14 @@
     "@fontsource-variable/inter": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query": "^5.102.3",
+    "@types/adm-zip": "^0.5.8",
     "@types/ffprobe-static": "^2.0.3",
+    "adm-zip": "^0.6.1",
     "better-sqlite3": "^13.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cn": "^0.5.0",
+    "csv-parse": "^7.0.3",
     "drizzle-orm": "^0.45.4",
     "ffprobe-static": "^3.1.0",
     "franc": "^6.2.0",
@@ -69,7 +72,10 @@
   },
   "imports": {
     "#components/*": "./src/renderer/components/*.tsx",
-    "#lib/*": "./src/renderer/lib/*.ts",
-    "#hooks/*": "./src/renderer/hooks/*.ts"
+    "#utils/*": "./src/renderer/lib/utils/*.ts",
+    "#contexts/*": "./src/renderer/lib/contexts/*.tsx",
+    "#hooks/*": "./src/renderer/lib/hooks/*.ts",
+    "#types/*": "./src/renderer/types/*.d.ts",
+    "#pages/*": "./src/renderer/pages/*.tsx"
   }
 }

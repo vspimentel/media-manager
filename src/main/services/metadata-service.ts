@@ -8,13 +8,10 @@ import { ProbeData } from "../types/ffmpeg";
 import path from "node:path";
 import { franc } from "franc";
 import langs from "langs";
-import { loadConfig } from "./config-service";
-
-const config = loadConfig();
-
-const MOVIES_FOLDER = config.moviesFolder;
 
 const execFileAsync = promisify(execFile);
+
+const CHUNK_SIZE = 65536;
 
 export async function getMovieMetadata(folder: string, videoFile: string): Promise<MovieMetadata> {
     const filePath = path.join(folder, videoFile);
@@ -65,6 +62,14 @@ export async function getMovieMetadata(folder: string, videoFile: string): Promi
         )
     )];
 
+    let ohashValue: string;
+
+    try {
+        ohashValue = ohash(filePath);
+    } catch (error) {
+        throw new Error(`Failed to compute ohash for file "${filePath}": ${error}`);
+    }
+
     return {
         filesize: file.size,
         resolution: {
@@ -75,7 +80,8 @@ export async function getMovieMetadata(folder: string, videoFile: string): Promi
         videoCodec: videoCodec,
         audioCodecs: audioCodecs,
         audioLanguages: audioLanguages,
-        subtitleLanguages: subtitleLanguages
+        subtitleLanguages: subtitleLanguages,
+        ohash: ohashValue
     }
 }
 
@@ -136,4 +142,33 @@ function getResolutionTag(height: number): string {
     if (height >= 450) return "480p";
 
     return "SD";
+}
+
+export function ohash(filepath: string): string {
+  const fd = fsSync.openSync(filepath, 'r');
+  const { size: filesize } = fsSync.fstatSync(fd);
+
+  if (filesize < CHUNK_SIZE * 2) {
+    fsSync.closeSync(fd);
+    throw new Error(`File too small: ${filesize} bytes`);
+  }
+
+  let hash = BigInt(filesize);
+  const buf = Buffer.alloc(8);
+
+  // Hash first 64KB
+  for (let i = 0; i < CHUNK_SIZE / 8; i++) {
+    fsSync.readSync(fd, buf, 0, 8, i * 8);
+    hash = (hash + buf.readBigUInt64LE(0)) & 0xFFFFFFFFFFFFFFFFn;
+  }
+
+  // Hash last 64KB
+  const tailOffset = Math.max(0, filesize - CHUNK_SIZE);
+  for (let i = 0; i < CHUNK_SIZE / 8; i++) {
+    fsSync.readSync(fd, buf, 0, 8, tailOffset + i * 8);
+    hash = (hash + buf.readBigUInt64LE(0)) & 0xFFFFFFFFFFFFFFFFn;
+  }
+
+  fsSync.closeSync(fd);
+  return hash.toString(16).padStart(16, '0');
 }

@@ -25,13 +25,13 @@ const WindowTitlebar = () => {
                 </span>
             </div>
             <div className="flex h-full items-center" style={{ WebkitAppRegion: "no-drag" } as CSSProperties}>
-                <Button type="button" variant="ghost" size="icon-sm" aria-label="Minimize window" title="Minimize" onClick={() => window.electron.windowMinimize()} className="h-full w-11 rounded-none text-white/50 hover:bg-white/8 hover:text-white">
+                <Button type="button" variant="ghost" size="icon-sm" aria-label="Minimize window" title="Minimize" onClick={() => window.electron.windowMinimize()} className="h-full w-11 rounded-none text-white/50 hover:bg-white/10 hover:text-white">
                     <Minus size={14} />
                 </Button>
-                <Button type="button" variant="ghost" size="icon-sm" aria-label={isMaximized ? "Restore window" : "Maximize window"} title={isMaximized ? "Restore" : "Maximize"} onClick={toggleMaximize} className="h-full w-11 rounded-none text-white/50 hover:bg-white/8 hover:text-white">
+                <Button type="button" variant="ghost" size="icon-sm" aria-label={isMaximized ? "Restore window" : "Maximize window"} title={isMaximized ? "Restore" : "Maximize"} onClick={toggleMaximize} className="h-full w-11 rounded-none text-white/50 hover:bg-white/10 hover:text-white">
                     {isMaximized ? <Copy size={12} /> : <Square size={12} />}
                 </Button>
-                <Button type="button" variant="ghost" size="icon-sm" aria-label="Close window" title="Close" onClick={() => window.electron.windowClose()} className="h-full w-12 rounded-none text-white/50 hover:bg-rose-500 hover:text-white">
+                <Button type="button" variant="ghost" size="icon-sm" aria-label="Close window" title="Close" onClick={() => window.electron.windowClose()} className="h-full w-12 rounded-none text-white/50 hover:bg-rose-500/20 hover:text-rose-100">
                     <X size={15} />
                 </Button>
             </div>
