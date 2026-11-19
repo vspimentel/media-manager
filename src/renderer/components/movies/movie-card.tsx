@@ -9,8 +9,7 @@ import { AudioLines, CalendarDays, Clock3, Languages, Monitor, Play, Star, Subti
 import { useEffect, useMemo, useState } from "react";
 import PosterFallback from "#components/fallbacks/poster-fallback";
 import { Link } from "react-router";
-import langs from "langs";
-import { formatDate, formatDateShort, getYearFromDate, showToast } from "#utils/common";
+import { formatDate, formatDateShort, getLanguageName, getYearFromDate, showToast } from "#utils/common";
 import { Movie } from "#types/movies";
 
 const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout }: { movie: Movie; onChangeMovie: (movie: Movie) => void; onChangePoster: (movie: Movie) => void; layout: string }) => {
@@ -32,7 +31,7 @@ const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout }: { movie: Mo
     }
 
     const handlePlayMovie = async () => {
-        const result = await window.electron.playMovie(movie.folder, movie.videoFile, movie.selectedSubtitleLanguage, movie.selectedAudioLanguage)
+        const result = await window.electron.playMovie(movie.id, movie.selectedSubtitleLanguage, movie.selectedAudioLanguage)
         if (!result.success) showToast({
             title: "Error playing movie",
             message: result.message,
@@ -57,7 +56,7 @@ const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout }: { movie: Mo
                             <>
                                 <Link to={`/movies/${movie.id}`} className={`relative aspect-2/3 w-full overflow-hidden border border-white/10 bg-white/4 transition duration-300 group-hover:-translate-y-1 group-hover:border-white/25 group-hover:shadow-cyan-950/30 ${layout === "compact" ? "rounded-lg shadow-md" : "rounded-xl shadow-xl shadow-black/30"}`}>
                                     {movie.poster
-                                        ? <img src={movie.poster} alt={movie.title} className="h-full w-full object-cover" />
+                                        ? <img src={movie.poster} className="h-full w-full object-cover" />
                                         : <PosterFallback iconSize={50} />
                                     }
                                     <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/65 via-transparent to-white/4 opacity-80" />
@@ -111,7 +110,7 @@ const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout }: { movie: Mo
                                             <CalendarDays size={14} /> {formatDate(movie.releaseDate)}
                                         </span>
                                         <span className="flex items-center gap-1.5">
-                                            <Languages size={14} />{movie?.originalLanguage && langs.where("1", movie.originalLanguage)?.name || "Unknown"}
+                                            <Languages size={14} />{movie?.originalLanguage && getLanguageName(movie.originalLanguage) || "Unknown"}
                                         </span>
                                     </div>
                                     <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-white/35">
@@ -157,7 +156,7 @@ const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout }: { movie: Mo
                                             {[
                                                 ["Runtime", movie.duration || "—"],
                                                 ["Release date", formatDate(movie.releaseDate)],
-                                                ["Language", movie?.originalLanguage && langs.where("1", movie.originalLanguage)?.name || "Unknown"],
+                                                ["Language", movie?.originalLanguage && getLanguageName(movie.originalLanguage) || "Unknown"],
                                                 ["Genre", genres.slice(0, 2).join(", ") || "Unknown"],
                                             ].map(([label, value]) => (
                                                 <div key={label} className="rounded-xl border border-white/6 bg-black/15 px-3 py-2.5">

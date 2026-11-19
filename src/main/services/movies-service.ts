@@ -3,14 +3,14 @@ import fs from "fs";
 import { MovieFolder, MovieLocalSubtitle, MovieMetadata } from "../types/movies";
 import pLimit from "p-limit";
 import { readJsonCache } from "./cache-service";
-import { loadConfig } from "./config-service";
+import { getConfig } from "./config-service";
 import { Movie } from "../database/schema/movie";
 import { deleteMovie, getAllMovies, getMovieByField, saveMovie } from "../database/services/movie-db-service";
 import { TMBDDetails } from "../types/tmdb";
 import { getMovieInfo, getTMDBImage, searchMovies } from "./tmbd-service";
 import { getMovieMetadata, getSubtitleLanguage } from "./metadata-service";
 
-const config = loadConfig();
+const config = getConfig();
 
 const MOVIES_FOLDER = config.moviesFolder;
 const preferredAudioLanguages = config.preferences.audioLanguage || ["eng"];
@@ -180,9 +180,13 @@ async function getMovieData(folder: MovieFolder): Promise<Movie> {
   let duration = "";
 
   if (!movieInfo) {
+    const filesize = fs.statSync(path.join(folder.path, folder.videoFile)).size;
     return saveMovie({
       videoFile: folder.videoFile,
       folder: folder.name,
+      filesize: filesize,
+      selectedAudioLanguage: "",
+      selectedSubtitleLanguage: "",
     })
   }
 

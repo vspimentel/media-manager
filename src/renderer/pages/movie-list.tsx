@@ -180,13 +180,13 @@ const MovieListPage = () => {
                         </div>
                         <div className="flex items-center gap-2">
                             <Select value={layout} items={layoutOptions} onValueChange={(value) => handleLayoutChange(String(value))}>
-                                <SelectTrigger size="sm" className="h-9 w-40 rounded-lg border-white/8 bg-white/4 px-3 text-xs text-white/75 shadow-none hover:border-white/15 hover:bg-white/8 dark:bg-white/4">
+                                <SelectTrigger className="h-8 w-40 rounded-lg border-white/8 bg-white/4 px-3 text-xs text-white/75 shadow-none hover:border-white/15 hover:bg-white/8">
                                     <SelectValue>
                                         {layoutOptions.find((option) => option.value === layout)?.label.icon}
                                         {layoutOptions.find((option) => option.value === layout)?.label.text}
                                     </SelectValue>
                                 </SelectTrigger>
-                                <SelectContent className="w-40 min-w-40 border-white/10 bg-zinc-950 text-white">
+                                <SelectContent>
                                     {layoutOptions.map((option) => (
                                         <SelectItem key={option.value} value={option.value} className="flex items-center gap-2 text-white/75">
                                             {option.label.icon}
@@ -196,12 +196,12 @@ const MovieListPage = () => {
                                 </SelectContent>
                             </Select>
                             <Select items={sortOptions} value={sortBy} onValueChange={(value) => handleSortChange(String(value))}>
-                                <SelectTrigger className="h-8 w-36 rounded-lg border-white/8 bg-white/4 px-3 text-xs text-white/75 shadow-none hover:border-white/15 hover:bg-white/8 dark:bg-white/4">
+                                <SelectTrigger className="h-8 w-36 rounded-lg border-white/8 bg-white/4 px-3 text-xs text-white/75 shadow-none hover:border-white/15 hover:bg-white/8">
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="w-36 min-w-36 border-white/10 bg-zinc-950 text-white">
+                                <SelectContent>
                                     {sortOptions.map((option) => (
-                                        <SelectItem key={option.value} value={option.value} className="text-white/75">{option.label}</SelectItem>
+                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>

@@ -1,11 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 /**
- * Provides a mutation hook to change the poster of a movie and invalidate the movies query upon success.
- * @param {number} movieId - The ID of the movie for which to change the poster.
- * @param {string} imagePath - The path of the new poster image.
- * @param {string} type - The type of the image to change.
- * @throws {Error} Throws an error if the mutation fails.
+ * Changes a movie image through Electron.
+ *
+ * @param variables - The movie image data.
+ * @param variables.movieId - The identifier of the movie.
+ * @param variables.imagePath - The path of the new image.
+ * @param variables.type - The type of image being changed, such as `poster`.
+ * @throws Rejects with an error when the image cannot be changed.
  */
 export function useChangeImage() {
     const client = useQueryClient();

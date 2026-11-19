@@ -1,16 +1,15 @@
 import PosterFallback from "#components/fallbacks/poster-fallback";
 import { Button } from "#components/ui/button";
-import { ArrowLeft, CalendarDays, Clapperboard, Clock3, ExternalLink, FilePlus2, Film, Folder, FolderOpen, Globe2, Languages, Loader, LoaderCircle, Play, RefreshCcw, Search, Star, Subtitles } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clapperboard, Clock3, ExternalLink, FilePlus2, Film, Folder, FolderOpen, Globe2, Languages, Link2, Loader, LoaderCircle, Play, RefreshCcw, Search, Star, Subtitles } from "lucide-react";
 import { Link, useParams } from "react-router";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "#components/ui/context-menu";
 import { Dialog } from "#components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "#components/ui/select";
 import prettyBytes from "pretty-bytes";
-import langs from "langs";
 import { MovieLocalSubtitle } from "../../main/types/movies";
 import { useGetMovie } from "#hooks/services/movies/useGetMovie";
-import { formatDate, getCountryName, showToast } from "#utils/common";
+import { formatDate, getCountryName, getLanguageName, showToast } from "#utils/common";
 import { useUpdateMovieFiles } from "#hooks/actions/movies/useUpdateMovieFiles";
 import { useAddSubtitleFile } from "#hooks/actions/movies/useAddSubtitleFile";
 import { useAddTorrentFile } from "#hooks/actions/movies/useAddTorrentFile";
@@ -19,6 +18,7 @@ import MovieBackgroundSelectionModal from "#components/modals/movies/background-
 import { Genre, Movie } from "#types/movies";
 import { useLetterboxdReview } from "#hooks/services/movies/useLetterboxdReview";
 import { useLetterboxdSession } from "#hooks/services/movies/useLetterboxdSession";
+import { useCalculateHash } from "#hooks/actions/subtitles/useCalculateHash";
 import SubtitlesSearchModal from "#components/modals/movies/subtitles-search";
 
 
@@ -38,7 +38,7 @@ const MovieDetailsPage = () => {
         let audioLanguagesItems: SelectItem[] = [
             ...audioLanguages.map((language) => ({
                 value: language,
-                label: language != "und" ? langs.where("1", language)?.name || language : "Unknown",
+                label: language != "und" ? getLanguageName(language) || language : "Unknown",
             })),
         ]
 
@@ -49,13 +49,13 @@ const MovieDetailsPage = () => {
             },
             ...subtitleLanguages.map((language) => ({
                 value: language,
-                label: language != "und" ? langs.where("1", language)?.name || language : "Unknown",
+                label: language != "und" ? getLanguageName(language) || language : "Unknown",
             })),
             ...subtitleFiles.map((subtitleFile: MovieLocalSubtitle) => {
                 const language = subtitleFile.language.split("-")[0];
                 return {
                     value: subtitleFile.language,
-                    label: `${language != "und" ? langs.where("1", language)?.name || language : "Unknown"} (File)`,
+                    label: `${language != "und" ? getLanguageName(language) || language : "Unknown"} (File)`,
                 }
             }),
         ]
@@ -68,7 +68,7 @@ const MovieDetailsPage = () => {
 
     const handlePlayMovie = async () => {
         if (!movie) return;
-        const result = await window.electron.playMovie(movie.folder, movie.videoFile, subtitleFile ? subtitleFile : subtitleLanguage, audioLanguage);
+        const result = await window.electron.playMovie(movie.id, subtitleFile ? subtitleFile : subtitleLanguage, audioLanguage);
         if (!result.success) showToast({
             title: "Error playing movie",
             message: result.message,
@@ -122,12 +122,28 @@ const MovieDetailsPage = () => {
     const [openPosterSelection, setOpenPosterSelection] = useState(false);
 
     const handleOpenPosterSelection = () => {
+        if (!movie || !movie.tmbdId) {
+            showToast({
+                title: "Error opening poster selection",
+                message: "This movie does not have a TMDB ID, so poster selection is unavailable.",
+                type: "error",
+            });
+            return;
+        }
         setOpenPosterSelection(true);
     };
 
     const [openBackgroundSelection, setOpenBackgroundSelection] = useState(false);
 
     const handleOpenBackgroundSelection = () => {
+        if (!movie || !movie.tmbdId) {
+            showToast({
+                title: "Error opening background selection",
+                message: "This movie does not have a TMDB ID, so background selection is unavailable.",
+                type: "error",
+            });
+            return;
+        }
         setOpenBackgroundSelection(true);
     };
 
@@ -205,9 +221,28 @@ const MovieDetailsPage = () => {
     };
 
     const [openSubtitleSearch, setOpenSubtitleSearch] = useState(false);
+    const { mutateAsync: calculateHash, isPending: isCalculatingHash } = useCalculateHash();
 
-    const handleOpenSubtitleSearch = () => {
-        console.log("Opening subtitle search modal");
+    const handleOpenSubtitleSearch = async () => {
+        if (!movie) return;
+        if (!movie.ohash) {
+            try {
+                const result = await calculateHash({ movieId: movie.id });
+                if (!result.success) {
+                    showToast({
+                        title: "Error calculating hash",
+                        message: result.message,
+                        type: "error",
+                    });
+                }
+            } catch (error) {
+                showToast({
+                    title: "Action failed",
+                    message: error instanceof Error ? error.message : "An unexpected error occurred",
+                    type: "error",
+                });
+            }
+        }
         setOpenSubtitleSearch(true);
     };
 
@@ -292,7 +327,7 @@ const MovieDetailsPage = () => {
                                     <h1 className="max-w-4xl text-4xl font-light leading-tight tracking-tight text-white md:text-6xl">
                                         {movie.title}
                                     </h1>
-                                    {movie.originalTitle && movie.originalTitle.toLowerCase() !== movie.title.toLowerCase() && (
+                                    {movie.originalTitle && movie.originalTitle.toLowerCase() !== (movie.title || movie.folder).toLowerCase() && (
                                         <span className="text-sm leading-normal text-white/40 md:text-base">
                                             ({movie.originalTitle})
                                         </span>
@@ -313,7 +348,7 @@ const MovieDetailsPage = () => {
                                         <Globe2 size={14} />{countries.join(", ") || "Unknown"}
                                     </span>
                                     <span className="flex items-center gap-1.5">
-                                        <Languages size={14} />{movie?.originalLanguage && langs.where("1", movie.originalLanguage)?.name || "Unknown"}
+                                        <Languages size={14} />{movie?.originalLanguage && getLanguageName(movie.originalLanguage) || "Unknown"}
                                     </span>
                                 </div>
                                 <p className="mt-6 max-w-3xl text-sm leading-7 text-white/65 md:text-base">{movie.overview}</p>
@@ -447,18 +482,12 @@ const MovieDetailsPage = () => {
                                 onValueChange={(value) => setAudioLanguage(value ?? "")}
                                 items={audioLanguagesItems}
                             >
-                                <SelectTrigger
-                                    size="sm"
-                                    className="h-8 min-w-40 rounded-md border-white/8 bg-white/5 px-2 text-xs text-white/75 shadow-none dark:bg-white/5"
-                                >
+                                <SelectTrigger className="min-w-40 rounded-lg border-white/10 bg-white/4 text-xs text-white/75">
                                     <SelectValue placeholder="Unknown" />
                                 </SelectTrigger>
-                                <SelectContent className="border-white/10 bg-zinc-950 text-white">
+                                <SelectContent className="min-w-41">
                                     {audioLanguagesItems.map((item) =>
-                                        <SelectItem
-                                            key={item.value} value={item.value}
-                                            className="text-white/75 focus:bg-white/10 focus:text-white"
-                                        >
+                                        <SelectItem key={item.value} value={item.value}>
                                             {item.label}
                                         </SelectItem>
                                     )}
@@ -482,15 +511,12 @@ const MovieDetailsPage = () => {
                                 disabled={subtitleLanguagesItems.length === 0}
                                 items={subtitleLanguagesItems}
                             >
-                                <SelectTrigger
-                                    size="sm"
-                                    className="h-8 min-w-40 rounded-md border-white/8 bg-white/5 px-2 text-xs text-white/75 shadow-none dark:bg-white/5"
-                                >
+                                <SelectTrigger className="min-w-40 rounded-lg border-white/10 bg-white/4 text-xs text-white/75">
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="border-white/10 bg-zinc-950 text-white">
+                                <SelectContent className="min-w-41">
                                     {subtitleLanguagesItems.map((item) =>
-                                        <SelectItem key={item.value} value={item.value} className="text-white/75 focus:bg-white/10 focus:text-white">
+                                        <SelectItem key={item.value} value={item.value}>
                                             {item.label}
                                         </SelectItem>
                                     )}
@@ -500,7 +526,7 @@ const MovieDetailsPage = () => {
                     </div>
                 </section>
 
-                <aside className="rounded-2xl border border-white/8 bg-black/20 p-5 md:p-6">
+                <aside className="rounded-2xl flex flex-col justify-between border border-white/8 bg-black/20 p-5 md:p-6">
                     <div className="mb-4 flex items-center justify-between">
                         <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-white/50">
                             <Folder size={14} className="text-cyan-100/60" /> Local files
@@ -567,14 +593,16 @@ const MovieDetailsPage = () => {
                                     type="button" variant="ghost" size="sm"
                                     className="h-8 justify-start gap-1.5 rounded-lg border border-cyan-200/10 bg-cyan-200/5 px-2 text-[11px] text-cyan-100/70"
                                 >
-                                    <Search size={13} />
-                                    Find online
+                                    {isCalculatingHash
+                                        ? (<><LoaderCircle size={13} className="animate-spin" /> Hashing...</>)
+                                        : (<><Search size={13} /> Find online</>)
+                                    }
                                 </Button>
                             </div>
                         </div>
                         <div className="rounded-xl border border-white/7 bg-white/2.5 p-3">
                             <div className="mb-1.5 flex justify-between text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">
-                                <span>Torrent file</span>
+                                <span>Download source</span>
                                 <span className={`rounded border px-1.5 py-0.5 text-[9px] ${movie.torrentFile ? "border-cyan-200/10 bg-cyan-200/5 text-cyan-100/70" : "border-white/8 bg-white/5"}`}>
                                     {movie.torrentFile ? "TORRENT" : "NO FILE"}
                                 </span>
@@ -585,7 +613,7 @@ const MovieDetailsPage = () => {
                             >
                                 {movie.torrentFile ? movie.torrentFile : "No torrent file added"}
                             </div>
-                            <div>
+                            <div className="mt-2.5 grid grid-cols-2 gap-2">
                                 <input
                                     ref={torrentInputRef}
                                     type="file"
@@ -600,11 +628,20 @@ const MovieDetailsPage = () => {
                                     type="button"
                                     variant="ghost"
                                     size="sm"
-                                    className="mt-2 h-8 w-full justify-start gap-2 rounded-lg border border-dashed border-white/10 text-xs text-white/50"
+                                    className="h-8 w-full justify-start gap-1.5 rounded-lg border border-white/8 px-2 text-[11px] text-white/50"
                                     onClick={() => torrentInputRef.current?.click()}
                                 >
                                     <FilePlus2 size={14} />
-                                    Add torrent file
+                                    Add file
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-full justify-start gap-1.5 rounded-lg border border-white/8 px-2 text-[11px] text-white/50"
+                                >
+                                    <Link2 size={14} />
+                                    Add URL
                                 </Button>
                             </div>
                         </div>
@@ -684,18 +721,28 @@ const MovieDetailsPage = () => {
                 </div>
             </section>
             <Dialog open={openPosterSelection} onOpenChange={setOpenPosterSelection}>
-                <MoviePosterSelectionModal
-                    movie={movie}
-                    onClose={() => setOpenPosterSelection(false)}
-                />
+                {openPosterSelection && (
+                    <MoviePosterSelectionModal
+                        movie={movie}
+                        onClose={() => setOpenPosterSelection(false)}
+                    />
+                )}
             </Dialog>
             <Dialog open={openBackgroundSelection} onOpenChange={setOpenBackgroundSelection}>
-                <MovieBackgroundSelectionModal movie={movie} onClose={() => setOpenBackgroundSelection(false)} />
+                {openBackgroundSelection && (
+                    <MovieBackgroundSelectionModal
+                        movie={movie}
+                        onClose={() => setOpenBackgroundSelection(false)}
+                    />
+                )}
             </Dialog>
             <Dialog open={openSubtitleSearch} onOpenChange={setOpenSubtitleSearch}>
-                <SubtitlesSearchModal
-                    movie={movie}
-                />
+                {openSubtitleSearch && (
+                    <SubtitlesSearchModal
+                        movie={movie}
+                        onClose={() => setOpenSubtitleSearch(false)}
+                    />
+                )}
             </Dialog>
         </div>
     );

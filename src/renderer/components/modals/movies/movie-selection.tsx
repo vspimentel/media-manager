@@ -5,10 +5,9 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "#components/ui/inp
 import { CalendarDays, Clapperboard, Globe, Search } from "lucide-react"
 import { useState } from "react";
 import useDebounce from "#hooks/common/useDebounce";
-import langs from "langs";
 import { useSearchMovies } from "#hooks/services/movies/useSearchMovies";
 import { useChangeMovie } from "#hooks/actions/movies/useChangeMovie";
-import { showToast } from "#utils/common";
+import { getLanguageName, showToast } from "#utils/common";
 import { Movie } from "#types/movies";
 
 
@@ -107,7 +106,7 @@ const MovieSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: () => 
                                 {getReleaseYear(movie.release_date)}
                                 <span className="px-0.5">·</span>
                                 <Globe size={13} />
-                                {movie.original_language ? langs.where("1", movie.original_language)?.name || "Unknown" : "Unknown"}
+                                {movie.original_language ? getLanguageName(movie.original_language) || "Unknown" : "Unknown"}
                             </div>
                             <div className="mt-2 line-clamp-2 overflow-hidden text-xs text-white/35">{movie.overview}</div>
                         </div>

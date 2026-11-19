@@ -3,17 +3,16 @@ import PosterFallback from "#components/fallbacks/poster-fallback";
 import { Check, Clapperboard, Image, Languages } from "lucide-react"
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "#components/ui/button";
-import langs from "langs";
 import { useGetMovieImages } from "#hooks/services/movies/useGetMoviePosters";
 import { MovieImage } from "../../../../main/types/movies";
 import { useChangeImage } from "#hooks/actions/movies/useChangePoster";
-import { showToast } from "#utils/common";
+import { getLanguageName, showToast } from "#utils/common";
 import { Movie } from "#types/movies";
 
 
 const MoviePosterSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: () => void }) => {
 
-    const { data, isLoading, error } = useGetMovieImages(movie.tmbdId, "poster");
+    const { data, isLoading, error } = useGetMovieImages(movie.tmbdId!, "poster");
 
     const { posterGroups, previewGroup, previewPoster } = useMemo(() => {
         const posters = (data ?? []) as MovieImage[];
@@ -28,7 +27,7 @@ const MoviePosterSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: 
         }, {} as Record<string, MovieImage[]>);
 
         const groups = Object.entries(postersByLanguage).map(([language, posters]) => ({
-            language: language != 'nt' ? langs.where("1", language)?.name : "No Text",
+            language: language != 'nt' ? getLanguageName(language) : "No Text",
             code: language.toUpperCase(),
             posters,
         }));

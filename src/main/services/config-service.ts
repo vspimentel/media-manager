@@ -8,7 +8,7 @@ import { AppConfig } from "../types/common";
  * @returns {AppConfig} The application configuration.
  * @throws {Error} Throws an error if the config file does not exist or cannot be read.
  */
-export function loadConfig(): AppConfig {
+export function getConfig(): AppConfig {
   const configPath = path.join(
     app.getPath("userData"),
     "config",
@@ -21,6 +21,7 @@ export function loadConfig(): AppConfig {
 
   return {
     tmdbApiKey: config.tmdbApiKey ? config.tmdbApiKey : "",
+    openSubtitlesApiKey: config.openSubtitlesApiKey ? config.openSubtitlesApiKey : "",
     moviesFolder: config.moviesFolder ? config.moviesFolder : path.join("D:", "Movies"),
     VLCPath: config.VLCPath ? config.VLCPath : "",
     preferences: {

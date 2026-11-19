@@ -2,9 +2,9 @@ import { MovieImage } from "../types/movies";
 import { TMBDDetails, TMBDImage, TMBDMovieImages, TMBDResult, TMBDSearch } from "../types/tmdb";
 import { pathToCacheURL } from "../utils/common";
 import { getCachedImage, readJsonCache, writeImageCache, writeJsonCache } from "./cache-service";
-import { loadConfig } from "./config-service";
+import { getConfig } from "./config-service";
 
-const config = loadConfig();
+const config = getConfig();
 
 const TMDB_API_KEY = config.tmdbApiKey;
 

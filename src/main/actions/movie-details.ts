@@ -1,14 +1,14 @@
 import path from "node:path";
 import { copyFile } from "node:fs/promises";
 import { getMovieByField, updateMovie } from "../database/services/movie-db-service";
-import { loadConfig } from "../services/config-service";
 import { getMovieMetadata, getSubtitleLanguage } from "../services/metadata-service";
 import { formatMovieFolder } from "../services/movies-service";
 import { ResultResponse } from "../types/common";
 import { MovieLocalSubtitle, MovieMetadata } from "../types/movies";
 import { shell } from "electron";
+import { getConfig } from "../services/config-service";
 
-const config = loadConfig();
+const config = getConfig();
 
 const MOVIES_FOLDER = config.moviesFolder;
 const preferredAudioLanguages = config.preferences.audioLanguage || ["eng"];

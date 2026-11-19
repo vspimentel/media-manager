@@ -10,7 +10,8 @@ import { Movie } from "#types/movies";
 
 
 const MovieBackgroundSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: () => void }) => {
-    const { data, isLoading, error } = useGetMovieImages(movie.tmbdId, "backdrop");
+
+    const { data, isLoading, error } = useGetMovieImages(movie.tmbdId!, "backdrop");
     const backgrounds = data ?? [];
     const [selectedBackground, setSelectedBackground] = useState<MovieImage | null>(null);
 

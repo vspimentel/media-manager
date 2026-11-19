@@ -8,9 +8,12 @@ import { ProbeData } from "../types/ffmpeg";
 import path from "node:path";
 import { franc } from "franc";
 import langs from "langs";
+import { getConfig } from "./config-service";
 
+const config = getConfig();
+
+const preferredSubtitleLanguages = config.preferences.subtitleLanguage || ["eng"];
 const execFileAsync = promisify(execFile);
-
 const CHUNK_SIZE = 65536;
 
 export async function getMovieMetadata(folder: string, videoFile: string): Promise<MovieMetadata> {
@@ -49,6 +52,7 @@ export async function getMovieMetadata(folder: string, videoFile: string): Promi
         audio.flatMap(stream =>
             stream.tags?.language ? [
                 langs.where("2B", stream.tags.language.trim())?.["1"] ||
+                langs.where("3", stream.tags.language.trim())?.["1"] ||
                 stream.tags.language.trim()
             ] : []
         )
@@ -57,17 +61,20 @@ export async function getMovieMetadata(folder: string, videoFile: string): Promi
         subtitles.flatMap(stream =>
             stream.tags?.language ? [
                 langs.where("2B", stream.tags.language.trim())?.["1"] ||
+                langs.where("3", stream.tags.language.trim())?.["1"] ||
                 stream.tags.language.trim()
             ] : []
         )
     )];
 
-    let ohashValue: string;
+    let ohashValue: string = "";
 
-    try {
-        ohashValue = ohash(filePath);
-    } catch (error) {
-        throw new Error(`Failed to compute ohash for file "${filePath}": ${error}`);
+    if (subtitleLanguages.length === 0 || !preferredSubtitleLanguages.some(lang => subtitleLanguages.includes(lang))) {
+        try {
+            ohashValue = ohash(filePath);
+        } catch (error) {
+            throw new Error(`Failed to compute ohash for file "${filePath}": ${error}`);
+        }
     }
 
     return {
@@ -145,30 +152,30 @@ function getResolutionTag(height: number): string {
 }
 
 export function ohash(filepath: string): string {
-  const fd = fsSync.openSync(filepath, 'r');
-  const { size: filesize } = fsSync.fstatSync(fd);
+    const fd = fsSync.openSync(filepath, 'r');
+    const { size: filesize } = fsSync.fstatSync(fd);
 
-  if (filesize < CHUNK_SIZE * 2) {
+    if (filesize < CHUNK_SIZE * 2) {
+        fsSync.closeSync(fd);
+        throw new Error(`File too small: ${filesize} bytes`);
+    }
+
+    let hash = BigInt(filesize);
+    const buf = Buffer.alloc(8);
+
+    // Hash first 64KB
+    for (let i = 0; i < CHUNK_SIZE / 8; i++) {
+        fsSync.readSync(fd, buf, 0, 8, i * 8);
+        hash = (hash + buf.readBigUInt64LE(0)) & 0xFFFFFFFFFFFFFFFFn;
+    }
+
+    // Hash last 64KB
+    const tailOffset = Math.max(0, filesize - CHUNK_SIZE);
+    for (let i = 0; i < CHUNK_SIZE / 8; i++) {
+        fsSync.readSync(fd, buf, 0, 8, tailOffset + i * 8);
+        hash = (hash + buf.readBigUInt64LE(0)) & 0xFFFFFFFFFFFFFFFFn;
+    }
+
     fsSync.closeSync(fd);
-    throw new Error(`File too small: ${filesize} bytes`);
-  }
-
-  let hash = BigInt(filesize);
-  const buf = Buffer.alloc(8);
-
-  // Hash first 64KB
-  for (let i = 0; i < CHUNK_SIZE / 8; i++) {
-    fsSync.readSync(fd, buf, 0, 8, i * 8);
-    hash = (hash + buf.readBigUInt64LE(0)) & 0xFFFFFFFFFFFFFFFFn;
-  }
-
-  // Hash last 64KB
-  const tailOffset = Math.max(0, filesize - CHUNK_SIZE);
-  for (let i = 0; i < CHUNK_SIZE / 8; i++) {
-    fsSync.readSync(fd, buf, 0, 8, tailOffset + i * 8);
-    hash = (hash + buf.readBigUInt64LE(0)) & 0xFFFFFFFFFFFFFFFFn;
-  }
-
-  fsSync.closeSync(fd);
-  return hash.toString(16).padStart(16, '0');
+    return hash.toString(16).padStart(16, '0');
 }

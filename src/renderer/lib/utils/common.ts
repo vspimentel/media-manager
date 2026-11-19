@@ -1,6 +1,8 @@
 import { toast } from "#components/ui/toast"
 import { clsx, type ClassValue } from "clsx"
+import langs from "langs";
 import { twMerge } from "tailwind-merge"
+import { LANGUAGE_NAMES, LANGUAGE_OS_CODES } from "./constants";
 
 /**
  * Merges class names and resolves conflicts using Tailwind's merge strategy.
@@ -61,4 +63,10 @@ export function getCountryName(code: string, language = "en") {
   } catch {
     return "Unknown";
   }
+}
+
+export function getLanguageName(code: string) {
+  if (LANGUAGE_NAMES[code]) return LANGUAGE_NAMES[code];
+  const parser = langs.where("1", code);
+  return parser ? parser.name : "Unknown";
 }

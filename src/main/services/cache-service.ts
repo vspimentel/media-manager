@@ -2,7 +2,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { app } from "electron";
 import { ensureDirectory, hash } from "../utils/common";
-import console from "node:console";
 
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 
@@ -99,6 +98,53 @@ export async function getCachedImage(dir: string, url: string): Promise<string |
 export async function writeImageCache(dir: string, url: string, bytes: ArrayBuffer): Promise<string> {
   const directory = path.join(cacheRoot(), "images", dir);
   const filePath = path.join(directory, `${hash(url)}.webp`);
+
+  await ensureDirectory(directory);
+  await fs.writeFile(filePath, Buffer.from(bytes));
+
+  return filePath;
+}
+
+
+/**
+ * Gets a cached file if it exists and is not expired. 
+ * If the file does not exist or is expired, the file is deleted and undefined is returned.
+ * @async 
+ * @param {string} dir - The directory within the cache.
+ * @param {string} filename - The name of the file.
+ * @returns {Promise<string | undefined>} The path to the cached file or undefined if it doesn't exist.
+ * @throws {Error} Throws an error if there is an issue accessing the cached file.
+ */
+export async function getCachedFile(dir: string, filename: string): Promise<string | undefined> {
+  const directory = path.join(cacheRoot(), "files", dir);
+  const filePath = path.join(directory, filename);
+
+  try {
+    const stats = await fs.stat(filePath);
+
+    if (Date.now() - stats.mtimeMs > CACHE_TTL) {
+      await fs.unlink(filePath);
+      return undefined;
+    }
+
+    return filePath;
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+/**
+ * Writes a file to the cache.
+ * @async
+ * @param {string} dir - The directory within the cache.
+ * @param {string} filename - The name of the file.
+ * @param {ArrayBuffer} bytes - The file data as an ArrayBuffer.
+ * @returns {Promise<string>} The path to the cached file.
+ */
+export async function writeFileCache(dir: string, filename: string, bytes: ArrayBuffer): Promise<string> {
+  const directory = path.join(cacheRoot(), "images", dir);
+  const filePath = path.join(directory, filename);
 
   await ensureDirectory(directory);
   await fs.writeFile(filePath, Buffer.from(bytes));
