@@ -22,6 +22,9 @@ declare global {
 
     // General services
     getConfig: void;
+    openLocalFile: { library: string; folder: string; file: string };
+    openExternalLink: { url: string };
+    openFolder: { library: string; folder: string };
 
     // Movie services
     getMovies: { update: boolean, sortBy: string, sortDirection: string };
@@ -37,23 +40,23 @@ declare global {
     makeReviewOnLetterboxd: { movieId: number };
     letterboxdReviewSubmitted: void;
 
-    // Movie item actions  
-    openMovieFolder: { folder: string };
+    // Movie actions
     playMovie: { movieId: number; subtitleLanguage: string, audioLanguage: string };
     changeMovie: { movieId: number; tmbdId: number };
     changeMovieImage: { movieId: number; imagePath: string; type: string };
-
-    // Movie details actions
     updateMovieFiles: { movieId: number; folder: string };
-    openLocalFile: { folder: string; file: string };
-    addSubtitleFile: { movieId: number; folder: string; sourcePath: string };
-    addTorrentFile: { movieId: number; folder: string; sourcePath: string };
     calculateMovieHash: { movieId: number };
-    searchSubtitles: { movieId: number; language: string };
 
     // Subtitles actions
+    searchSubtitles: { movieId: number; language: string };
+    addSubtitleFile: { movieId: number; folder: string; sourcePath: string };
     testSubtitle: { movieId: number; subtitleFileId: number };
     saveSubtitleFile: { movieId: number; subtitleFileId: number; subtitleFileName: string };
+
+    // Source actions
+    addTorrentFile: { movieId: number; folder: string; sourcePath: string };
+    addDownloadLink: { movieId: number; link: string };
+    deleteSource: { movieId: number; sourceType: string; sourceValue: string };
   };
 
   type EventPayloadMapping = {
@@ -65,6 +68,9 @@ declare global {
 
     // General services
     getConfig: AppConfig;
+    openLocalFile: ResultResponse;
+    openExternalLink: ResultResponse;
+    openFolder: ResultResponse;
 
     // Movie services
     getMovies: Movie[];
@@ -80,66 +86,72 @@ declare global {
     makeReviewOnLetterboxd: ResultResponse;
     letterboxdReviewSubmitted: LetterboxdReview;
 
-    // Movie item actions
-    openMovieFolder: ResultResponse;
+    // Movie actions
     playMovie: ResultResponse;
     changeMovie: ResultResponse;
     changeMovieImage: ResultResponse;
-
-    // Movie details actions
     updateMovieFiles: ResultResponse;
-    openLocalFile: ResultResponse;
-    addSubtitleFile: ResultResponse;
-    addTorrentFile: ResultResponse;
     calculateMovieHash: ResultResponse;
-    searchSubtitles: OpenSubtitlesSearchResult;
 
     // Subtitles actions
+    searchSubtitles: OpenSubtitlesSearchResult;
+    addSubtitleFile: ResultResponse;
     testSubtitle: ResultResponse;
     saveSubtitleFile: ResultResponse;
+
+    // Source actions
+    addTorrentFile: ResultResponse;
+    addDownloadLink: ResultResponse;
+    deleteSource: ResultResponse;
   };
 
+  interface ElectronApi {
+    // Window controls
+    windowMinimize: () => Promise<boolean>;
+    windowToggleMaximize: () => Promise<boolean>;
+    windowClose: () => Promise<boolean>;
+    windowIsMaximized: () => Promise<boolean>;
+
+    // General services
+    getConfig: () => Promise<AppConfig>;
+    openLocalFile: (library: string, folder: string, file: string) => Promise<ResultResponse>;
+    openExternalLink: (url: string) => Promise<ResultResponse>;
+    openFolder: (library: string, folder: string) => Promise<ResultResponse>;
+
+
+    // Movie services
+    getMovie: (id: number) => Promise<Movie | undefined>;
+    getMovies: (update: boolean, sortBy: string, sortDirection: string) => Promise<Movie[]>;
+    getMovieImages: (tmbdId: number, type: string) => Promise<MovieImage[]>;
+    searchMovies: (title: string) => Promise<TMBDResult[]>;
+
+    // Options services
+    isLoggedInToLetterboxd: () => Promise<string | null>;
+    loginToLetterboxd: () => Promise<string | null>;
+    logoutFromLetterboxd: () => Promise<void>;
+    importRatingsFromLetterboxd: () => Promise<number | null>;
+    makeReviewOnLetterboxd: (movieId: number) => Promise<ResultResponse>;
+
+    // Movie actions
+    playMovie: (movieId: number, subtitleLanguage: string, audioLanguage: string) => Promise<ResultResponse>;
+    changeMovie: (movieId: number, tmbdId: number) => Promise<ResultResponse>;
+    changeMovieImage: (movieId: number, imagePath: string, type: string) => Promise<ResultResponse>;
+    updateMovieFiles: (movieId: number, folder: string) => Promise<ResultResponse>;
+    calculateMovieHash: (movieId: number) => Promise<ResultResponse>;
+
+    // Subtitles actions
+    searchSubtitles: (movieId: number, language: string) => Promise<OpenSubtitlesSearchResult>;
+    addSubtitleFile: (movieId: number, folder: string, file: File) => Promise<ResultResponse>;
+    testSubtitle: (movieId: number, subtitleFileId: number) => Promise<ResultResponse>;
+    saveSubtitleFile: (movieId: number, subtitleFileId: number, subtitleFileName: string) => Promise<ResultResponse>;
+
+    // Source actions
+    addTorrentFile: (movieId: number, folder: string, file: File) => Promise<ResultResponse>;
+    addDownloadLink: (movieId: number, link: string) => Promise<ResultResponse>;
+    deleteSource: (movieId: number, sourceType: string, sourceValue: string) => Promise<ResultResponse>;
+  }
+
   interface Window {
-    electron: {
-      // Window controls
-      windowMinimize: () => Promise<boolean>;
-      windowToggleMaximize: () => Promise<boolean>;
-      windowClose: () => Promise<boolean>;
-      windowIsMaximized: () => Promise<boolean>;
-
-      // General services
-      getConfig: () => Promise<AppConfig>;
-
-      // Movie services
-      getMovies: (update: boolean, sortBy: string, sortDirection: string) => Promise<Movie[]>;
-      getMovie: (id: number) => Promise<Movie | undefined>;
-      searchMovies: (title: string) => Promise<TMBDResult[]>;
-      getMovieImages: (tmbdId: number, type: string) => Promise<MovieImage[]>;
-
-      // Options services
-      isLoggedInToLetterboxd: () => Promise<string | null>;
-      loginToLetterboxd: () => Promise<string | null>;
-      logoutFromLetterboxd: () => Promise<void>;
-      importRatingsFromLetterboxd: () => Promise<number | null>;
-      makeReviewOnLetterboxd: (movieId: number) => Promise<ResultResponse>;
-
-      // Movie item actions
-      openMovieFolder: (folder: string) => Promise<ResultResponse>;
-      playMovie: (movieId: number, subtitleLanguage: string, audioLanguage: string) => Promise<ResultResponse>;
-      changeMovie: (movieId: number, tmbdId: number) => Promise<ResultResponse>;
-      changeMovieImage: (movieId: number, imagePath: string, type: string) => Promise<ResultResponse>;
-
-      // Movie details actions
-      updateMovieFiles: (movieId: number, folder: string) => Promise<ResultResponse>;
-      openLocalFile: (folder: string, file: string) => Promise<ResultResponse>;
-      addSubtitleFile: (movieId: number, folder: string, file: File) => Promise<ResultResponse>;
-      addTorrentFile: (movieId: number, folder: string, file: File) => Promise<ResultResponse>;
-      calculateMovieHash: (movieId: number) => Promise<ResultResponse>;
-      searchSubtitles: (movieId: number, language: string) => Promise<OpenSubtitlesSearchResult>;
-
-      // Subtitles actions
-      testSubtitle: (movieId: number, subtitleFileId: number) => Promise<ResultResponse>;
-      saveSubtitleFile: (movieId: number, subtitleFileId: number, subtitleFileName: string) => Promise<ResultResponse>;
-    };
+    electron: ElectronApi;
   }
 }

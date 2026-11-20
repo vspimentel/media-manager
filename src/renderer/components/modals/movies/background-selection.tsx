@@ -60,7 +60,7 @@ const MovieBackgroundSelectionModal = ({ movie, onClose }: { movie: Movie; onClo
                 </div>
             </header>
 
-            <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden md:grid-cols-[minmax(0,1fr)_290px] md:grid-rows-1">
+            <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden md:grid-cols-[minmax(0,1fr)_300px] md:grid-rows-1">
                 <div className="soft-scrollbar min-h-0 overflow-y-auto p-5 md:p-6">
                     {isLoading ? <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         {Array.from({ length: 6 }, (_, i) => <div key={i} className="aspect-video animate-pulse rounded-xl border border-white/6 bg-white/5" />)}
@@ -102,19 +102,26 @@ const MovieBackgroundSelectionModal = ({ movie, onClose }: { movie: Movie; onClo
                     }
                 </div>
 
-                <aside className="flex min-h-0 flex-col justify-between gap-4 border-t border-white/10 bg-white/2 p-5 md:border-l md:border-t-0">
+                <aside className="flex h-full flex-col items-stretch justify-between border-l border-t-0 border-white/10 bg-white/2 p-5">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-xs font-medium text-white/65">
-                            <Image size={14} className="text-cyan-100/65" />
-                            Preview
-                        </div>
+                        <div className="flex items-center gap-2 text-xs font-medium text-white/65"><Image size={14} className="text-cyan-100/65" />Background selected</div>
                         <span className="rounded-md border border-white/8 bg-white/4 px-1.5 py-0.5 text-[10px] text-white/35">16:9</span>
                     </div>
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-cyan-200/20 bg-white/5 shadow-xl shadow-black/30">
-                        {selectedBackground ? <img src={`https://image.tmdb.org/t/p/original${selectedBackground.file}`} alt={`${movie.title} selected background preview`} className="absolute inset-0 h-full w-full object-cover" /> : movie.backdrop ? <img src={movie.backdrop} alt={`${movie.title} current background`} className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><Image size={24} className="text-white/25" /></div>}
-                        <div className="absolute inset-0 bg-linear-to-t from-black/65 via-transparent to-black/10" /><span className="absolute bottom-3 left-3 right-3 truncate text-sm font-medium text-white/90">{movie.title}</span>
+
+                    <div className="flex w-full items-center justify-center rounded-2xl border border-cyan-200/20 bg-cyan-200/4 p-1.5 shadow-xl shadow-black/30">
+                        <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black/25">
+                            {selectedBackground ? <img src={`https://image.tmdb.org/t/p/original${selectedBackground.file}`} alt={`${movie.title} selected background preview`} className="absolute inset-0 h-full w-full object-cover" /> : movie.backdrop ? <img src={movie.backdrop} alt={`${movie.title} current background`} className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><Image size={24} className="text-white/25" /></div>}
+                            <div className="absolute inset-0 bg-linear-to-t from-black/65 via-transparent to-black/10" />
+                        </div>
                     </div>
-                    <div className="rounded-xl border border-white/8 bg-black/20 p-3"><div className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/35">Selected image</div><div className="mt-1.5 truncate text-xs text-white/70">{selectedBackground ? `Backdrop ${backgrounds.findIndex((image) => image.file === selectedBackground.file) + 1}` : "Choose an image to preview"}</div></div>
+
+                    <div className="rounded-xl border border-white/8 bg-black/20 p-3">
+                        <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/35">Background information</div>
+                        <div className="mt-2 flex items-center gap-2 whitespace-nowrap text-[10px] text-white/70">
+                            <span className="rounded border border-white/10 px-1.5 py-0.5 text-[9px] text-white/45">{selectedBackground ? `#${backgrounds.findIndex((image) => image.file === selectedBackground.file) + 1}` : "—"}</span>
+                            <span>{selectedBackground ? `Dimensions: ${selectedBackground.width} × ${selectedBackground.height} px` : "Dimensions unavailable"}</span>
+                        </div>
+                    </div>
                 </aside>
             </div>
             <footer className="flex items-center justify-between gap-4 border-t border-white/10 px-6 py-3">

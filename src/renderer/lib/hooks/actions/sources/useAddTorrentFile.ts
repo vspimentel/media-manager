@@ -13,7 +13,6 @@ export function useAddTorrentFile() {
         },
         onSuccess: async (_result, { movieId }) => {
             await Promise.all([
-                queryClient.invalidateQueries({ queryKey: ["movies"] }),
                 queryClient.invalidateQueries({ queryKey: ["movie", movieId] }),
             ]);
         }

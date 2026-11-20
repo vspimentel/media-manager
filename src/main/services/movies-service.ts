@@ -1,6 +1,6 @@
 import path from "node:path";
 import fs from "fs";
-import { MovieFolder, MovieLocalSubtitle, MovieMetadata } from "../types/movies";
+import { MovieFolder, MovieMetadata } from "../types/movies";
 import pLimit from "p-limit";
 import { readJsonCache } from "./cache-service";
 import { getConfig } from "./config-service";
@@ -9,6 +9,7 @@ import { deleteMovie, getAllMovies, getMovieByField, saveMovie } from "../databa
 import { TMBDDetails } from "../types/tmdb";
 import { getMovieInfo, getTMDBImage, searchMovies } from "./tmbd-service";
 import { getMovieMetadata, getSubtitleLanguage } from "./metadata-service";
+import { DownloadSource, SubtitleFile } from "../types/common";
 
 const config = getConfig();
 
@@ -112,7 +113,7 @@ export function formatMovieFolder(folder: string): MovieFolder | null {
     const ext = path.extname(file).toLowerCase();
     return [".srt", ".vtt", ".ass", ".ssa", ".sub", ".idx", ".txt"].includes(ext);
   });
-  const torrentFile = fs.readdirSync(folderPath).find((file) => {
+  const torrentFiles = fs.readdirSync(folderPath).filter((file) => {
     const ext = path.extname(file).toLowerCase();
     return ext === ".torrent";
   });
@@ -121,7 +122,7 @@ export function formatMovieFolder(folder: string): MovieFolder | null {
     name: folderName,
     videoFile: videoFile,
     subtitlesFiles: subtitlesFiles,
-    torrentFile: torrentFile,
+    torrentFiles: torrentFiles,
   } as MovieFolder;
 
 }
@@ -132,32 +133,32 @@ export function formatMovieFolder(folder: string): MovieFolder | null {
  * @param {MovieFolder} folder - The movie folder for which to fetch data.
  * @returns {Promise<Movie>} The movie data object.
  */
-async function getMovieData(folder: MovieFolder): Promise<Movie> {
+async function getMovieData(formattedFolder: MovieFolder): Promise<Movie> {
 
-  const movie = getMovieByField("folder", folder.name);
+  const movie = getMovieByField("folder", formattedFolder.name);
 
   if (movie) return movie;
 
   let metadata: MovieMetadata | undefined;
 
   try {
-    metadata = await getMovieMetadata(folder.path, folder.videoFile);
+    metadata = await getMovieMetadata(formattedFolder.path, formattedFolder.videoFile);
   } catch (error) {
-    console.error(`Failed to get metadata for movie "${folder.name}":`, error);
+    console.error(`Failed to get metadata for movie "${formattedFolder.name}":`, error);
   }
 
-  let subtitleFiles: MovieLocalSubtitle[] = [];
+  let subtitleFiles: SubtitleFile[] = [];
 
-  if (folder.subtitlesFiles.length > 0) {
-    subtitleFiles = folder.subtitlesFiles.map((subtitleFile, index) => {
+  if (formattedFolder.subtitlesFiles.length > 0) {
+    subtitleFiles = formattedFolder.subtitlesFiles.map((subtitleFile, index) => {
       try {
-        const language = getSubtitleLanguage(folder.path, subtitleFile);
+        const language = getSubtitleLanguage(formattedFolder.path, subtitleFile);
         return {
           file: subtitleFile,
           language: `${language}-${index + 1}`,
         };
       } catch (error) {
-        console.error(`Failed to read subtitle language for movie "${folder.name}" and subtitle file "${subtitleFile}":`, error);
+        console.error(`Failed to read subtitle language for movie "${formattedFolder.name}" and subtitle file "${subtitleFile}":`, error);
         return {
           file: subtitleFile,
           language: `und-${index + 1}`,
@@ -166,12 +167,12 @@ async function getMovieData(folder: MovieFolder): Promise<Movie> {
     });
   }
 
-  const cacheKey = folder.name.trim().toLowerCase();
+  const cacheKey = formattedFolder.name.trim().toLowerCase();
 
   let movieInfo = await readJsonCache<TMBDDetails>("movies", cacheKey);
 
   if (!movieInfo) {
-    const results = await searchMovies(folder.name);
+    const results = await searchMovies(formattedFolder.name);
     if (results.length > 0) movieInfo = await getMovieInfo(results[0].id, cacheKey);
   }
 
@@ -180,10 +181,10 @@ async function getMovieData(folder: MovieFolder): Promise<Movie> {
   let duration = "";
 
   if (!movieInfo) {
-    const filesize = fs.statSync(path.join(folder.path, folder.videoFile)).size;
+    const filesize = fs.statSync(path.join(formattedFolder.path, formattedFolder.videoFile)).size;
     return saveMovie({
-      videoFile: folder.videoFile,
-      folder: folder.name,
+      videoFile: formattedFolder.videoFile,
+      folder: formattedFolder.name,
       filesize: filesize,
       selectedAudioLanguage: "",
       selectedSubtitleLanguage: "",
@@ -194,7 +195,7 @@ async function getMovieData(folder: MovieFolder): Promise<Movie> {
     try {
       poster = (await getTMDBImage(movieInfo.poster_path)).path;
     } catch (error) {
-      console.warn(`Failed to fetch poster for movie "${folder.name}":`, error);
+      console.warn(`Failed to fetch poster for movie "${formattedFolder.name}":`, error);
     }
   }
 
@@ -202,7 +203,7 @@ async function getMovieData(folder: MovieFolder): Promise<Movie> {
     try {
       backdrop = (await getTMDBImage(movieInfo.backdrop_path)).path;
     } catch (error) {
-      console.warn(`Failed to fetch backdrop for movie "${folder.name}":`, error);
+      console.warn(`Failed to fetch backdrop for movie "${formattedFolder.name}":`, error);
     }
   }
 
@@ -233,11 +234,20 @@ async function getMovieData(folder: MovieFolder): Promise<Movie> {
   const selectedAudioLanguage = selectPreferredLanguage(metadata?.audioLanguages || [], preferredAudioLanguages);
   const selectedSubtitleLanguage = selectPreferredLanguage(availableSubtitleLanguages || [], preferredSubtitleLanguages);
 
+  let sources: DownloadSource[] = [];
+
+  if (formattedFolder.torrentFiles.length > 0) {
+    sources = formattedFolder.torrentFiles.map((torrentFile) => ({
+      type: "torrent",
+      source: torrentFile,
+    }));
+  }
+
   return saveMovie({
-    folder: folder.name,
-    videoFile: folder.videoFile,
-    torrentFile: folder.torrentFile,
+    folder: formattedFolder.name,
+    videoFile: formattedFolder.videoFile,
     subtitleFiles: JSON.stringify(subtitleFiles),
+    sources: JSON.stringify(sources),
     resolution: JSON.stringify(metadata?.resolution || { tag: "", width: 0, height: 0 }),
     videoCodec: metadata?.videoCodec || "",
     audioCodecs: JSON.stringify(metadata?.audioCodecs || []),

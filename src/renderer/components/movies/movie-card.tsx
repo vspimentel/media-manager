@@ -22,7 +22,7 @@ const MovieCard = ({ movie, onChangeMovie, onChangePoster, layout }: { movie: Mo
     }, []);
 
     const handleOpenMovieFolder = async () => {
-        const result = await window.electron.openMovieFolder(movie.folder)
+        const result = await window.electron.openFolder("movies", movie.folder)
         if (!result.success) showToast({
             title: "Error opening movie folder",
             message: result.message,

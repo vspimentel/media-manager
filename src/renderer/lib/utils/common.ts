@@ -2,7 +2,7 @@ import { toast } from "#components/ui/toast"
 import { clsx, type ClassValue } from "clsx"
 import langs from "langs";
 import { twMerge } from "tailwind-merge"
-import { LANGUAGE_NAMES, LANGUAGE_OS_CODES } from "./constants";
+import { COUNTRY_NAMES, LANGUAGE_NAMES, LANGUAGE_OS_CODES } from "./constants";
 
 /**
  * Merges class names and resolves conflicts using Tailwind's merge strategy.
@@ -59,6 +59,7 @@ export function getCountryName(code: string, language = "en") {
   const parser = new Intl.DisplayNames([language], { type: "region" });
 
   try {
+    if (COUNTRY_NAMES[code.toLocaleLowerCase()]) return COUNTRY_NAMES[code.toLowerCase()];
     return parser.of(code.toUpperCase());
   } catch {
     return "Unknown";

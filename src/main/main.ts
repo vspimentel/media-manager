@@ -4,15 +4,16 @@ import { app, protocol, net, BrowserWindow } from "electron";
 import { ipcMainHandle } from "./utils/electron";
 import { getMovie, getMovies } from "./services/movies-service";
 import { pathToFileURL } from "url";
-import { calculateMovieHash, changeMovie, changeMovieImage, openMovieFolder, playMovie } from "./actions/movie-item";
 import { initializeDatabase } from "./database";
 import { isDev } from './utils/common';
 import { getMovieImages, searchMovies } from './services/tmbd-service';
-import { addSubtitleFile, addTorrentFile, openLocalFile, updateMovieFiles } from './actions/movie-details';
+import { calculateMovieHash, changeMovie, changeMovieImage, playMovie, updateMovieFiles } from './actions/movie';
 import { importRatingsFromLetterboxd, isLoggedInToLetterboxd, loginToLetterboxd, logoutFromLetterboxd, makeReviewOnLetterboxd } from './services/letterboxd-service';
 import { searchSubtitles } from './services/open-subtitles-service';
 import { getConfig } from './services/config-service';
-import { saveSubtitleFile, testSubtitle } from './actions/subtitles';
+import { addSubtitleFile, saveSubtitleFile, testSubtitle } from './actions/subtitles';
+import { addDownloadLink, addTorrentFile, deleteSource } from './actions/sources';
+import { openExternalLink, openFolder, openLocalFile } from './actions/general';
 
 async function createWindow() {
   const win = new BrowserWindow({
@@ -61,7 +62,19 @@ async function createWindow() {
     return getConfig();
   });
 
-  // Movies services
+  ipcMainHandle("openLocalFile", async (args) => {
+    return await openLocalFile(args.library, args.folder, args.file);
+  });
+
+  ipcMainHandle("openExternalLink", async (args) => {
+    return await openExternalLink(args.url);
+  });
+
+  ipcMainHandle("openFolder", async (args) => {
+    return await openFolder(args.library, args.folder);
+  });
+
+  // Movie services
   ipcMainHandle("getMovies", async (args) => {
     return await getMovies(args.update, args.sortBy, args.sortDirection);
   });
@@ -99,11 +112,7 @@ async function createWindow() {
     return await makeReviewOnLetterboxd(win, args.movieId);
   });
 
-  // Movies actions
-  ipcMainHandle("openMovieFolder", async (args) => {
-    return await openMovieFolder(args.folder);
-  });
-
+  // Movie actions
   ipcMainHandle("playMovie", async (args) => {
     return await playMovie(args.movieId, args.subtitleLanguage, args.audioLanguage);
   });
@@ -116,38 +125,42 @@ async function createWindow() {
     return await changeMovieImage(args.movieId, args.imagePath, args.type);
   });
 
-  // Movie details actions
   ipcMainHandle("updateMovieFiles", async (args) => {
-    return updateMovieFiles(args.movieId, args.folder);
-  });
-
-  ipcMainHandle("openLocalFile", async (args) => {
-    return await openLocalFile(args.folder, args.file);
-  });
-
-  ipcMainHandle("addSubtitleFile", async (args) => {
-    return addSubtitleFile(args.movieId, args.folder, args.sourcePath);
-  });
-
-  ipcMainHandle("addTorrentFile", async (args) => {
-    return addTorrentFile(args.movieId, args.folder, args.sourcePath);
+    return await updateMovieFiles(args.movieId, args.folder);
   });
 
   ipcMainHandle("calculateMovieHash", async (args) => {
     return await calculateMovieHash(args.movieId);
   });
 
+  // Subtitles actions
   ipcMainHandle("searchSubtitles", async (args) => {
     return await searchSubtitles(args.movieId, args.language);
   });
 
-  // Subtitles actions
+  ipcMainHandle("addSubtitleFile", async (args) => {
+    return await addSubtitleFile(args.movieId, args.folder, args.sourcePath);
+  });
+
   ipcMainHandle("testSubtitle", async (args) => {
     return await testSubtitle(args.movieId, args.subtitleFileId);
   });
 
   ipcMainHandle("saveSubtitleFile", async (args) => {
     return await saveSubtitleFile(args.movieId, args.subtitleFileId, args.subtitleFileName);
+  });
+
+  // Source actions
+  ipcMainHandle("addTorrentFile", async (args) => {
+    return await addTorrentFile(args.movieId, args.folder, args.sourcePath);
+  });
+
+  ipcMainHandle("addDownloadLink", async (args) => {
+    return await addDownloadLink(args.movieId, args.link);
+  });
+
+  ipcMainHandle("deleteSource", async (args) => {
+    return await deleteSource(args.movieId, args.sourceType, args.sourceValue);
   });
 }
 

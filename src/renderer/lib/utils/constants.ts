@@ -1,3 +1,9 @@
+
+export const COUNTRY_NAMES: Record<string, string> = {
+    "su": "Soviet Union",
+    "yu": "Yugoslavia"
+}
+
 export const LANGUAGE_NAMES: Record<string, string> = {
     "la": "Spanish (LA)",
 }

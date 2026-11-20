@@ -7,19 +7,19 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } 
 import { Dialog } from "#components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "#components/ui/select";
 import prettyBytes from "pretty-bytes";
-import { MovieLocalSubtitle } from "../../main/types/movies";
 import { useGetMovie } from "#hooks/services/movies/useGetMovie";
 import { formatDate, getCountryName, getLanguageName, showToast } from "#utils/common";
 import { useUpdateMovieFiles } from "#hooks/actions/movies/useUpdateMovieFiles";
-import { useAddSubtitleFile } from "#hooks/actions/movies/useAddSubtitleFile";
-import { useAddTorrentFile } from "#hooks/actions/movies/useAddTorrentFile";
+import { useAddSubtitleFile } from "#hooks/actions/subtitles/useAddSubtitleFile";
 import MoviePosterSelectionModal from "#components/modals/movies/poster-selection";
 import MovieBackgroundSelectionModal from "#components/modals/movies/background-selection";
 import { Genre, Movie } from "#types/movies";
 import { useLetterboxdReview } from "#hooks/services/movies/useLetterboxdReview";
-import { useLetterboxdSession } from "#hooks/services/movies/useLetterboxdSession";
-import { useCalculateHash } from "#hooks/actions/subtitles/useCalculateHash";
+import { useLetterboxdSession } from "#hooks/services/config/useLetterboxdSession";
+import { useCalculateHash } from "#hooks/actions/movies/useCalculateHash";
 import SubtitlesSearchModal from "#components/modals/movies/subtitles-search";
+import SourcesListModal from "#components/modals/movies/sources-list";
+import { DownloadSource, SubtitleFile } from "../../main/types/common";
 
 
 const MovieDetailsPage = () => {
@@ -27,13 +27,13 @@ const MovieDetailsPage = () => {
     const { data, isLoading, error } = useGetMovie(Number(movieId));
     const movie = data as Movie | undefined;
 
-    const { resolution, extension, audioCodecs, audioLanguagesItems, subtitleFiles, subtitleLanguagesItems, genres, countries } = useMemo(() => {
+    const { resolution, extension, audioCodecs, audioLanguagesItems, subtitleFiles, subtitleLanguagesItems, torrents, links, genres, countries } = useMemo(() => {
         const resolution: { tag: string; width: number; height: number } = movie?.resolution ? JSON.parse(movie.resolution) : { tag: "", width: 0, height: 0 };
         const extension: string = movie?.videoFile ? movie.videoFile.split(".").pop() || "" : "";
         const audioCodecs: string[] = movie?.audioCodecs ? JSON.parse(movie.audioCodecs) : [];
         const audioLanguages: string[] = movie?.audioLanguages ? JSON.parse(movie.audioLanguages) : [];
         const subtitleLanguages: string[] = movie?.subtitleLanguages ? JSON.parse(movie.subtitleLanguages) : [];
-        const subtitleFiles: MovieLocalSubtitle[] = movie?.subtitleFiles ? JSON.parse(movie.subtitleFiles) : [];
+        const subtitleFiles: SubtitleFile[] = movie?.subtitleFiles ? JSON.parse(movie.subtitleFiles) : [];
 
         let audioLanguagesItems: SelectItem[] = [
             ...audioLanguages.map((language) => ({
@@ -51,7 +51,7 @@ const MovieDetailsPage = () => {
                 value: language,
                 label: language != "und" ? getLanguageName(language) || language : "Unknown",
             })),
-            ...subtitleFiles.map((subtitleFile: MovieLocalSubtitle) => {
+            ...subtitleFiles.map((subtitleFile: SubtitleFile) => {
                 const language = subtitleFile.language.split("-")[0];
                 return {
                     value: subtitleFile.language,
@@ -60,10 +60,12 @@ const MovieDetailsPage = () => {
             }),
         ]
 
+        const torrents: DownloadSource[] = movie?.sources ? JSON.parse(movie.sources).filter((source: DownloadSource) => source.type === "torrent") : [];
+        const links: DownloadSource[] = movie?.sources ? JSON.parse(movie.sources).filter((source: DownloadSource) => source.type === "link") : [];
         const genres: Genre[] = movie?.genres ? JSON.parse(movie.genres) : [];
         const countries: string[] = movie?.countries ? JSON.parse(movie.countries).map((country: string) => getCountryName(country)) : [];
 
-        return { resolution, extension, audioCodecs, audioLanguagesItems, subtitleFiles, subtitleLanguagesItems, genres, countries };
+        return { resolution, extension, audioCodecs, audioLanguagesItems, subtitleFiles, subtitleLanguagesItems, torrents, links, genres, countries };
     }, [movie]);
 
     const handlePlayMovie = async () => {
@@ -78,7 +80,7 @@ const MovieDetailsPage = () => {
 
     const handleOpenFolder = async () => {
         if (!movie) return;
-        const result = await window.electron.openMovieFolder(movie.folder);
+        const result = await window.electron.openFolder("movies", movie.folder);
         if (!result.success) showToast({
             title: "Error opening folder",
             message: result.message,
@@ -100,7 +102,7 @@ const MovieDetailsPage = () => {
             });
         } catch (error) {
             showToast({
-                title: "Action failed",
+                title: "Could not post review",
                 message: error instanceof Error ? error.message : "An unexpected error occurred",
                 type: "error",
             });
@@ -180,7 +182,7 @@ const MovieDetailsPage = () => {
             });
         } catch (error) {
             showToast({
-                title: "Action failed",
+                title: "Files not updated",
                 message: error instanceof Error ? error.message : "An unexpected error occurred",
                 type: "error",
             });
@@ -189,7 +191,7 @@ const MovieDetailsPage = () => {
 
     const handleOpenLocalFile = async (file: string) => {
         if (!movie) return;
-        const result = await window.electron.openLocalFile(movie.folder, file);
+        const result = await window.electron.openLocalFile("movies", movie.folder, file);
         if (!result.success) showToast({
             title: "Error opening file",
             message: result.message,
@@ -213,7 +215,7 @@ const MovieDetailsPage = () => {
 
         } catch (error) {
             showToast({
-                title: "Action failed",
+                title: "Subtitle file not added",
                 message: error instanceof Error ? error.message : "An unexpected error occurred",
                 type: "error",
             });
@@ -237,7 +239,7 @@ const MovieDetailsPage = () => {
                 }
             } catch (error) {
                 showToast({
-                    title: "Action failed",
+                    title: "Could not calculate hash",
                     message: error instanceof Error ? error.message : "An unexpected error occurred",
                     type: "error",
                 });
@@ -246,28 +248,7 @@ const MovieDetailsPage = () => {
         setOpenSubtitleSearch(true);
     };
 
-    const torrentInputRef = useRef<HTMLInputElement>(null);
-
-    const addTorrentFile = useAddTorrentFile();
-
-    const handleAddTorrentFile = async (file: File) => {
-        if (!movie) return;
-        try {
-            const result = await addTorrentFile.mutateAsync({ movieId: movie.id, folder: movie.folder, torrentFile: file });
-            showToast({
-                title: "Torrent file added",
-                message: result.message,
-                type: result.success ? "success" : "error",
-            });
-
-        } catch (error) {
-            showToast({
-                title: "Action failed",
-                message: error instanceof Error ? error.message : "An unexpected error occurred",
-                type: "error",
-            });
-        }
-    };
+    const [openSourcesList, setOpenSourcesList] = useState(false);
 
     if (isLoading) {
         return <div className="mx-auto flex h-full w-full max-w-375 items-center justify-center p-6 text-sm text-white/45">Loading movie details…</div>;
@@ -542,8 +523,8 @@ const MovieDetailsPage = () => {
 
                     </div>
                     <div className="space-y-2.5">
-                        <div className="rounded-xl border border-white/7 bg-white/2.5 p-3">
-                            <div className="mb-1.5 flex justify-between text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">
+                        <div className="rounded-xl flex flex-col gap-2 border border-white/7 bg-white/2.5 p-3">
+                            <div className="flex justify-between text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">
                                 <span>Movie file</span>
                                 <span className="rounded border text-[9px] px-1.5 py-0.5 border-cyan-200/10 bg-cyan-200/5 text-cyan-100/70">VIDEO</span>
                             </div>
@@ -554,8 +535,8 @@ const MovieDetailsPage = () => {
                                 {movie.videoFile}
                             </div>
                         </div>
-                        <div className="rounded-xl border border-white/7 bg-white/2.5 p-3">
-                            <div className="mb-1.5 flex items-center justify-between text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">
+                        <div className="rounded-xl flex flex-col gap-2 border border-white/7 bg-white/2.5 p-3">
+                            <div className="flex items-center justify-between text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">
                                 <span>Subtitle file</span>
                                 <span className={`rounded border text-[9px] px-1.5 py-0.5 ${subtitleFiles.length ? "border-cyan-200/10 bg-cyan-200/5 text-cyan-100/70" : "border-white/8 bg-white/5"}`}>
                                     {subtitleFiles.length > 0 ? `${subtitleFiles.length} ${subtitleFiles.length === 1 ? 'FILE' : 'FILES'}` : 'NO FILES'}
@@ -567,7 +548,7 @@ const MovieDetailsPage = () => {
                             >
                                 {subtitleFile ? subtitleFile : 'No subtitle file selected'}
                             </div>
-                            <div className="mt-2.5 grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-2 gap-2">
                                 <input
                                     ref={subtitleInputRef}
                                     type="file"
@@ -579,9 +560,7 @@ const MovieDetailsPage = () => {
                                     }}
                                 />
                                 <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
+                                    type="button" variant="ghost" size="sm"
                                     className="h-8 w-full justify-start gap-1.5 rounded-lg border border-white/8 px-2 text-[11px] text-white/50"
                                     onClick={() => subtitleInputRef.current?.click()}
                                 >
@@ -600,48 +579,29 @@ const MovieDetailsPage = () => {
                                 </Button>
                             </div>
                         </div>
-                        <div className="rounded-xl border border-white/7 bg-white/2.5 p-3">
-                            <div className="mb-1.5 flex justify-between text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">
-                                <span>Download source</span>
-                                <span className={`rounded border px-1.5 py-0.5 text-[9px] ${movie.torrentFile ? "border-cyan-200/10 bg-cyan-200/5 text-cyan-100/70" : "border-white/8 bg-white/5"}`}>
-                                    {movie.torrentFile ? "TORRENT" : "NO FILE"}
+                        <div className="flex flex-col gap-2 rounded-xl border border-white/7 bg-white/2.5 p-3">
+                            <div className="flex items-center justify-between text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">
+                                <span>Download sources</span>
+                                <span className={`rounded border text-[9px] px-1.5 py-0.5 ${subtitleFiles.length ? "border-cyan-200/10 bg-cyan-200/5 text-cyan-100/70" : "border-white/8 bg-white/5"}`}>
+                                    {torrents.length > 0 || links.length > 0 ? `${torrents.length + links.length} ${torrents.length + links.length === 1 ? 'SOURCE' : 'SOURCES'}` : 'NO SOURCES'}
                                 </span>
                             </div>
-                            <div
-                                className={`truncate text-xs text-white/75 ${movie.torrentFile ? "hover:text-white/90 hover:underline cursor-pointer" : ""}`}
-                                onClick={() => movie.torrentFile && handleOpenLocalFile(movie.torrentFile)}
-                            >
-                                {movie.torrentFile ? movie.torrentFile : "No torrent file added"}
+                            <div className="truncate text-xs text-white/75">
+                                {torrents.length > 0 || links.length > 0
+                                    ? `Torrent files (${torrents.length}) - Download links (${links.length})`
+                                    : 'No download sources available'
+                                }
                             </div>
-                            <div className="mt-2.5 grid grid-cols-2 gap-2">
-                                <input
-                                    ref={torrentInputRef}
-                                    type="file"
-                                    accept=".torrent"
-                                    className="hidden"
-                                    onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                                        const file = event.target.files?.[0];
-                                        if (file) handleAddTorrentFile(file);
-                                    }}
-                                />
+                            <div className="gap-2">
                                 <Button
                                     type="button"
                                     variant="ghost"
                                     size="sm"
-                                    className="h-8 w-full justify-start gap-1.5 rounded-lg border border-white/8 px-2 text-[11px] text-white/50"
-                                    onClick={() => torrentInputRef.current?.click()}
+                                    className="h-8 w-full gap-1.5 flex justify-center rounded-lg border border-white/8 px-2 text-[11px] text-white/50"
+                                    onClick={() => setOpenSourcesList(true)}
                                 >
-                                    <FilePlus2 size={14} />
-                                    Add file
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-full justify-start gap-1.5 rounded-lg border border-white/8 px-2 text-[11px] text-white/50"
-                                >
-                                    <Link2 size={14} />
-                                    Add URL
+                                    <Link2 size={13} />
+                                    Manage sources list
                                 </Button>
                             </div>
                         </div>
@@ -720,30 +680,35 @@ const MovieDetailsPage = () => {
                     ))}
                 </div>
             </section>
-            <Dialog open={openPosterSelection} onOpenChange={setOpenPosterSelection}>
-                {openPosterSelection && (
+            {openPosterSelection && (
+                <Dialog open={openPosterSelection} onOpenChange={setOpenPosterSelection}>
                     <MoviePosterSelectionModal
                         movie={movie}
                         onClose={() => setOpenPosterSelection(false)}
                     />
-                )}
-            </Dialog>
-            <Dialog open={openBackgroundSelection} onOpenChange={setOpenBackgroundSelection}>
-                {openBackgroundSelection && (
+                </Dialog>
+            )}
+            {openBackgroundSelection && (
+                <Dialog open={openBackgroundSelection} onOpenChange={setOpenBackgroundSelection}>
                     <MovieBackgroundSelectionModal
                         movie={movie}
                         onClose={() => setOpenBackgroundSelection(false)}
                     />
-                )}
-            </Dialog>
-            <Dialog open={openSubtitleSearch} onOpenChange={setOpenSubtitleSearch}>
-                {openSubtitleSearch && (
+                </Dialog>
+            )}
+            {openSubtitleSearch && (
+                <Dialog open={openSubtitleSearch} onOpenChange={setOpenSubtitleSearch}>
                     <SubtitlesSearchModal
                         movie={movie}
                         onClose={() => setOpenSubtitleSearch(false)}
                     />
-                )}
-            </Dialog>
+                </Dialog>
+            )}
+            {openSourcesList && (
+                <Dialog open={openSourcesList} onOpenChange={setOpenSourcesList}>
+                    <SourcesListModal movie={movie} />
+                </Dialog>
+            )}
         </div>
     );
 };

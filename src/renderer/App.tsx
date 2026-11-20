@@ -25,9 +25,11 @@ const App = () => {
                     </div>
                 </div>
                 <Toaster />
-                <Dialog open={showMovieSettingsModal} onOpenChange={setShowMovieSettingsModal}>
-                    {showMovieSettingsModal && <MovieSettingsModal />}
-                </Dialog>
+                {showMovieSettingsModal && (
+                    <Dialog open={showMovieSettingsModal} onOpenChange={setShowMovieSettingsModal}>
+                        <MovieSettingsModal />
+                    </Dialog>
+                )}
             </DarkGradientBg>
         </>
     )

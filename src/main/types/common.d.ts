@@ -14,5 +14,14 @@ export type ResultResponse = {
   message?: string;
 }
 
+export type DownloadSource = {
+  type: "torrent" | "link";
+  source: string;
+}
+
+export type SubtitleFile = {
+  file: string;
+  language: string;
+}
 
 

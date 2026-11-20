@@ -1,8 +1,8 @@
 import { Button } from "#components/ui/button";
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "#components/ui/dialog";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "#components/ui/input-group";
-import { useLetterboxdImport } from "#hooks/services/movies/useLetterboxdImport";
-import { useLetterboxdSession } from "#hooks/services/movies/useLetterboxdSession";
+import { useLetterboxdImport } from "#hooks/services/config/useLetterboxdImport";
+import { useLetterboxdSession } from "#hooks/services/config/useLetterboxdSession";
 import { showToast } from "#utils/common";
 import { AudioLines, Check, Cookie, Folder, Link2, LogIn, Plus, RefreshCw, Settings2, Subtitles, Video, X } from "lucide-react";
 import type { ReactNode } from "react";

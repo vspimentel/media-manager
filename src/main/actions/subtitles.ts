@@ -1,18 +1,42 @@
 import path from "node:path";
-import { getMovieByField, updateMovie } from "../database/services/movie-db-service";
+import { getMovieByField } from "../database/services/movie-db-service";
 import { getConfig } from "../services/config-service";
 import { getSubtitleFile } from "../services/open-subtitles-service";
 import { ResultResponse } from "../types/common";
 import { SubtitleDownloadResult } from "../types/open-subtitles";
 import { spawn } from "node:child_process";
 import { copyFile } from "node:fs/promises";
-import { getSubtitleLanguage } from "../services/metadata-service";
-import { updateMovieFiles } from "./movie-details";
+import { updateMovieFiles } from "./movie";
 
 const config = getConfig();
 
 const MOVIES_FOLDER = config.moviesFolder;
 const VLC_PATH = config.VLCPath;
+
+export async function addSubtitleFile(movieId: number, folder: string, sourcePath: string): Promise<ResultResponse> {
+    const movie = getMovieByField("id", movieId.toString());
+    if (!movie) return { success: false, message: "Movie not found" };
+
+    const movieFolderPath = path.resolve(MOVIES_FOLDER, folder);
+    const moviesRoot = path.resolve(MOVIES_FOLDER);
+
+    const sourceFilePath = path.resolve(sourcePath);
+    const extension = path.extname(sourceFilePath).toLowerCase();
+
+    if (!movieFolderPath.startsWith(moviesRoot + path.sep)) return { success: false, message: "Invalid movie folder" };
+
+    if (![".srt", ".vtt", ".ass", ".ssa", ".sub", ".idx", ".txt"].includes(extension)) return { success: false, message: "Unsupported subtitle file format" };
+
+    const destinationPath = path.join(movieFolderPath, path.basename(sourceFilePath));
+
+    try {
+        await copyFile(sourceFilePath, destinationPath);
+    } catch (error) {
+        return { success: false, message: `Failed to add subtitle file: ${error instanceof Error ? error.message : "Unknown error"}` };
+    }
+
+    return updateMovieFiles(movieId, folder);
+}
 
 export async function testSubtitle(movieId: number, subtitleFileId: number): Promise<ResultResponse> {
     const movie = getMovieByField("id", movieId.toString());

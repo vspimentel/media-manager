@@ -3,7 +3,7 @@ export type Movie = {
   folder: string;
   videoFile: string;
   subtitleFiles: string | null;
-  torrentFile: string | null;
+  sources: string | null;
   filesize: number;
   resolution: string | null;
   videoCodec: string | null;
@@ -36,4 +36,12 @@ export type Movie = {
 export type Genre = {
   id: number;
   name: string;
+}
+
+export type MovieFilters = {
+  query: string,
+  yearRange: [number, number],
+  country: string,
+  language: string,
+  resolution: string
 }

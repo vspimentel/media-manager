@@ -122,7 +122,9 @@ const MovieSelectionModal = ({ movie, onClose }: { movie: Movie; onClose: () => 
                     </div>
                 ))}
             </div>
-            <div className="border-t border-white/10 px-6 py-3 text-center text-[11px] text-white/30">Choose a result to update this movie's match</div>
+            <div className="border-t border-white/10 px-6 py-3 text-center text-[11px] text-white/30">
+                Choose a result to update this movie's match
+            </div>
         </DialogContent>
     )
 }

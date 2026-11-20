@@ -3,7 +3,7 @@ export type MovieFolder = {
   name: string;
   videoFile: string;
   subtitlesFiles: string[];
-  torrentFile: string | null;
+  torrentFiles: string[];
 };
 
 export type MovieImage = {
@@ -14,21 +14,18 @@ export type MovieImage = {
   type: "poster" | "backdrop" | "logo";
 }
 
+export type MovieResolution = {
+  tag: string;
+  width: number;
+  height: number;
+}
+
 export type MovieMetadata = {
   filesize: number;
   ohash: string;
-  resolution: {
-    tag: string;
-    width: number;
-    height: number;
-  };
+  resolution: MovieResolution;
   videoCodec?: string;
   audioCodecs: string[];
   audioLanguages: string[];
   subtitleLanguages: string[];
-}
-
-export type MovieLocalSubtitle = {
-  file: string;
-  language: string;
 }

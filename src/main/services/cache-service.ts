@@ -143,7 +143,7 @@ export async function getCachedFile(dir: string, filename: string): Promise<stri
  * @returns {Promise<string>} The path to the cached file.
  */
 export async function writeFileCache(dir: string, filename: string, bytes: ArrayBuffer): Promise<string> {
-  const directory = path.join(cacheRoot(), "images", dir);
+  const directory = path.join(cacheRoot(), "files", dir);
   const filePath = path.join(directory, filename);
 
   await ensureDirectory(directory);
